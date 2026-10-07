@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { rankHistory, seoKeywords } from '@/data/platformData';
 import { LineChart, ArrowUp, ArrowDown, Minus, RefreshCw, Zap, Globe } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
+import LiveSerpCheck from './LiveSerpCheck';
 
 const RankChart: React.FC = () => {
   const w = 560, h = 200, pad = 28;
@@ -56,6 +57,8 @@ const SEOMonitor: React.FC = () => {
         </div>
         <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-mono"><span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> LIVE</span>
       </div>
+
+      <LiveSerpCheck />
 
       <div className="grid lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 rounded-xl border border-slate-800 bg-slate-900/60 p-5">

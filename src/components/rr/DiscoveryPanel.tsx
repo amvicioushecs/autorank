@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useRRData } from '@/contexts/RRDataContext';
 import { Opportunity } from '@/data/platformData';
-import { Radar, Search, TrendingUp, Target, DollarSign, Rocket, Loader2, Check } from 'lucide-react';
+import { Radar, Search, TrendingUp, Target, DollarSign, Rocket, Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
+import LiveMarketScan from './LiveMarketScan';
 
 const ScoreRing: React.FC<{ score: number }> = ({ score }) => {
   const c = score >= 88 ? '#34d399' : score >= 80 ? '#38bdf8' : '#fbbf24';
@@ -21,23 +22,15 @@ const ScoreRing: React.FC<{ score: number }> = ({ score }) => {
 
 const DiscoveryPanel: React.FC = () => {
   const { opportunities, deployOpportunity, loading } = useRRData();
-  const [scanning, setScanning] = useState(false);
+  const [showLive, setShowLive] = useState(true);
   const [deploying, setDeploying] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-
-  const runScan = () => {
-    setScanning(true);
-    setTimeout(() => {
-      setScanning(false);
-      toast({ title: 'Scan complete', description: `Discovery Agent validated ${opportunities.length} low-competition niches.` });
-    }, 1800);
-  };
 
   const deploy = async (o: Opportunity) => {
     setDeploying(o.id);
     try {
       await deployOpportunity(o);
-      toast({ title: 'Architect Agent triggered', description: `Property for "${o.niche}" saved to database — DNS, SSL & city pages queued.` });
+      toast({ title: 'Architect Agent triggered', description: `Property for "${o.niche}" saved to your portfolio — DNS, SSL & city pages queued.` });
     } catch (e) {
       toast({ title: 'Deployment failed', description: 'Could not save property.', variant: 'destructive' });
     } finally {
@@ -51,21 +44,22 @@ const DiscoveryPanel: React.FC = () => {
     <div className="space-y-5">
       <div className="rounded-xl border border-slate-800 bg-gradient-to-r from-sky-950/40 to-emerald-950/20 p-5 flex flex-col md:flex-row md:items-center gap-4">
         <div className="w-12 h-12 rounded-xl bg-sky-500/15 flex items-center justify-center shrink-0">
-          <Radar className={`w-6 h-6 text-sky-400 ${scanning ? 'animate-spin' : ''}`} />
+          <Radar className="w-6 h-6 text-sky-400" />
         </div>
         <div className="flex-1">
           <h2 className="text-white font-bold">Discovery Agent</h2>
-          <p className="text-sm text-slate-400">Scrapes Google Trends, Keyword Planner & competitors to surface high-intent, low-competition local niches.</p>
+          <p className="text-sm text-slate-400">Pulls live Google keyword demand, CPC and competition through treg to surface high-intent, low-competition local niches.</p>
         </div>
         <button
-          onClick={runScan}
-          disabled={scanning}
-          className="flex items-center gap-2 bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-900 font-semibold text-sm px-4 py-2.5 rounded-lg disabled:opacity-60"
+          onClick={() => setShowLive((v) => !v)}
+          className="flex items-center gap-2 bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-900 font-semibold text-sm px-4 py-2.5 rounded-lg"
         >
-          {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Radar className="w-4 h-4" />}
-          {scanning ? 'Scanning markets...' : 'Run Niche Scan'}
+          <Radar className="w-4 h-4" />
+          {showLive ? 'Hide Live Scanner' : 'Run Niche Scan'}
         </button>
       </div>
+
+      {showLive && <LiveMarketScan />}
 
       <div className="flex items-center gap-2 bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-2 max-w-md">
         <Search className="w-4 h-4 text-slate-500" />

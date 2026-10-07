@@ -52,6 +52,14 @@ function relTime(ts: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+// ---------- Ownership ----------
+async function ownerId(): Promise<string> {
+  const { data } = await supabase.auth.getSession();
+  const id = data.session?.user?.id;
+  if (!id) throw new Error('Sign in required');
+  return id;
+}
+
 // ---------- Properties ----------
 export async function fetchProperties(): Promise<Property[]> {
   const { data, error } = await supabase.from('rr_properties').select('*').order('mrr', { ascending: false });
@@ -64,6 +72,7 @@ export async function createProperty(p: {
   health?: number; rankPosition?: number; keywords?: number;
 }): Promise<Property> {
   const row = {
+    user_id: await ownerId(),
     domain: p.domain,
     niche: p.niche,
     city: p.city,
@@ -99,6 +108,33 @@ export async function fetchOpportunities(): Promise<Opportunity[]> {
     .order('score', { ascending: false });
   if (error) throw error;
   return (data || []).map(mapOpportunity);
+}
+
+export async function createOpportunity(o: Omit<Opportunity, 'id'>): Promise<Opportunity> {
+  const { data, error } = await supabase
+    .from('rr_opportunities')
+    .insert({
+      user_id: await ownerId(),
+      niche: o.niche,
+      city: o.city,
+      search_volume: o.searchVolume,
+      competition: o.competition,
+      cpc: o.cpc,
+      est_revenue: o.estRevenue,
+      score: o.score,
+      deployed: false,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return mapOpportunity(data);
+}
+
+// ---------- Starter portfolio (first sign-in) ----------
+export async function seedStarter(): Promise<number> {
+  const { data, error } = await supabase.rpc('rr_seed_starter');
+  if (error) throw error;
+  return Number(data) || 0;
 }
 
 export async function deployOpportunity(opp: Opportunity): Promise<Property> {

@@ -13,6 +13,8 @@ const ClientPortal: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [sending, setSending] = useState(false);
   const [leasing, setLeasing] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [smsOptIn, setSmsOptIn] = useState(true);
 
   useEffect(() => {
     if (!selectedId && properties.length) {
@@ -23,6 +25,9 @@ const ClientPortal: React.FC = () => {
 
   const selected: Property | undefined = properties.find((p) => p.id === selectedId);
   if (!selected) {
+    if (properties.length === 0) {
+      return <div className="text-center py-20 text-slate-500">No properties in your portfolio yet — deploy one from the Discovery Agent or Property Builder.</div>;
+    }
     return <div className="text-center py-20 text-slate-500 flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Loading properties...</div>;
   }
 
@@ -55,12 +60,14 @@ const ClientPortal: React.FC = () => {
     }
     setSending(true);
     try {
-      await fetch('https://famous.ai/api/crm/6a1954e40f635744360df733/subscribe', {
+      await fetch('https://famous.ai/api/crm/6a19aa7e9b69056178b8830a/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
           name: selected.client || undefined,
+          phone: phone.trim() || undefined,
+          sms_opt_in: smsOptIn === true,
           source: 'client-portal',
           tags: ['client-portal', selected.niche.toLowerCase()],
         }),
@@ -68,6 +75,7 @@ const ClientPortal: React.FC = () => {
     } catch (_) { /* ignore */ }
     setSending(false);
     setEmail('');
+    setPhone('');
     toast({ title: 'Portal invite sent', description: `Restricted Client View access granted for ${selected.domain}.` });
   };
 
@@ -134,6 +142,18 @@ const ClientPortal: React.FC = () => {
                 {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Invite'}
               </button>
             </div>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Phone number (optional)"
+              aria-label="Phone number (optional)"
+              className="mt-2 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-600 outline-none focus:border-sky-500"
+            />
+            <label className="mt-2 flex items-start gap-2 text-[11px] text-slate-400 cursor-pointer">
+              <input type="checkbox" checked={smsOptIn} onChange={(e) => setSmsOptIn(e.target.checked)} className="mt-0.5 accent-sky-500" />
+              Text me updates. Msg &amp; data rates may apply. Reply STOP to unsubscribe.
+            </label>
           </form>
           <p className="text-[11px] text-slate-500 mt-2">Grants a restricted "Client View" with their lead metrics &amp; billing status.</p>
         </div>
