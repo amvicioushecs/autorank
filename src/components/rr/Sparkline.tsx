@@ -9,12 +9,13 @@ interface Props {
 }
 
 const Sparkline: React.FC<Props> = ({ data, color = '#34d399', invert = false, width = 100, height = 32 }) => {
+  const id = React.useId();
   if (!data.length) return null;
   const max = Math.max(...data);
   const min = Math.min(...data);
   const range = max - min || 1;
   const pts = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * width;
+    const x = data.length > 1 ? (i / (data.length - 1)) * width : width / 2;
     let norm = (v - min) / range;
     if (invert) norm = 1 - norm;
     const y = height - norm * height;
@@ -22,7 +23,6 @@ const Sparkline: React.FC<Props> = ({ data, color = '#34d399', invert = false, w
   });
   const path = `M ${pts.join(' L ')}`;
   const areaPath = `${path} L ${width},${height} L 0,${height} Z`;
-  const id = React.useId();
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
       <defs>

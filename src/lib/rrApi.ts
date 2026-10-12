@@ -2,7 +2,10 @@ import { supabase } from '@/lib/supabase';
 import { Property, Opportunity, Lead } from '@/data/platformData';
 
 // ---------- Mappers ----------
-const mapProperty = (r: any): Property => ({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Row = Record<string, any>;
+
+const mapProperty = (r: Row): Property => ({
   id: r.id,
   domain: r.domain,
   niche: r.niche,
@@ -18,7 +21,7 @@ const mapProperty = (r: any): Property => ({
   trend: Array.isArray(r.trend) ? r.trend : [],
 });
 
-const mapOpportunity = (r: any): Opportunity => ({
+const mapOpportunity = (r: Row): Opportunity => ({
   id: r.id,
   niche: r.niche,
   city: r.city,
@@ -29,7 +32,7 @@ const mapOpportunity = (r: any): Opportunity => ({
   score: r.score,
 });
 
-const mapLead = (r: any): Lead => ({
+const mapLead = (r: Row): Lead => ({
   id: r.id,
   property: r.property,
   niche: r.niche,
@@ -42,8 +45,8 @@ const mapLead = (r: any): Lead => ({
   time: relTime(r.created_at),
 });
 
-function relTime(ts: string): string {
-  const diff = Date.now() - new Date(ts).getTime();
+export function relTime(ts: string, now = Date.now()): string {
+  const diff = now - new Date(ts).getTime();
   const m = Math.floor(diff / 60000);
   if (m < 1) return 'just now';
   if (m < 60) return `${m}m ago`;
@@ -53,7 +56,7 @@ function relTime(ts: string): string {
 }
 
 // ---------- Ownership ----------
-async function ownerId(): Promise<string> {
+export async function ownerId(): Promise<string> {
   const { data } = await supabase.auth.getSession();
   const id = data.session?.user?.id;
   if (!id) throw new Error('Sign in required');
@@ -62,7 +65,8 @@ async function ownerId(): Promise<string> {
 
 // ---------- Properties ----------
 export async function fetchProperties(): Promise<Property[]> {
-  const { data, error } = await supabase.from('rr_properties').select('*').order('mrr', { ascending: false });
+  const uid = await ownerId();
+  const { data, error } = await supabase.from('rr_properties').select('*').eq('user_id', uid).order('mrr', { ascending: false });
   if (error) throw error;
   return (data || []).map(mapProperty);
 }
@@ -91,19 +95,26 @@ export async function createProperty(p: {
   return mapProperty(data);
 }
 
+/** Status a property should have after (un)assigning a client. */
+export const clientStatus = (client: string | null): 'rented' | 'ranking' => (client ? 'rented' : 'ranking');
+
 export async function updatePropertyClient(id: string, client: string | null, mrr: number) {
+  const uid = await ownerId();
   const { error } = await supabase
     .from('rr_properties')
-    .update({ client, mrr, status: client ? 'rented' : 'ranking' })
-    .eq('id', id);
+    .update({ client, mrr, status: clientStatus(client) })
+    .eq('id', id)
+    .eq('user_id', uid);
   if (error) throw error;
 }
 
 // ---------- Opportunities ----------
 export async function fetchOpportunities(): Promise<Opportunity[]> {
+  const uid = await ownerId();
   const { data, error } = await supabase
     .from('rr_opportunities')
     .select('*')
+    .eq('user_id', uid)
     .eq('deployed', false)
     .order('score', { ascending: false });
   if (error) throw error;
@@ -137,28 +148,49 @@ export async function seedStarter(): Promise<number> {
   return Number(data) || 0;
 }
 
+/** Build a domain suggestion from an opportunity, e.g. "Charlotte, NC" + "Garage Door Repair" -> charlottegaragedoorrepair.com */
+export function domainForOpportunity(opp: Pick<Opportunity, 'city' | 'niche'>): string {
+  const city = opp.city.split(',')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+  const niche = opp.niche.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return `${`${city}${niche}`.slice(0, 56)}.com`;
+}
+
+/**
+ * Deploy an opportunity: create the property FIRST, then mark the opportunity deployed.
+ * If marking fails, the just-created property is deleted (rollback) so state stays consistent.
+ */
 export async function deployOpportunity(opp: Opportunity): Promise<Property> {
-  // mark opportunity deployed
-  await supabase.from('rr_opportunities').update({ deployed: true }).eq('id', opp.id);
-  // create a property from it
-  const slug = `${opp.city.split(',')[0].toLowerCase().replace(/\s+/g, '')}${opp.niche.toLowerCase().replace(/[^a-z]/g, '')}`;
-  return createProperty({
-    domain: `${slug}.com`.slice(0, 60),
+  const uid = await ownerId();
+  const property = await createProperty({
+    domain: domainForOpportunity(opp),
     niche: opp.niche,
     city: opp.city,
     status: 'building',
     health: 40,
   });
+  const { error } = await supabase
+    .from('rr_opportunities')
+    .update({ deployed: true })
+    .eq('id', opp.id)
+    .eq('user_id', uid);
+  if (error) {
+    const { error: rbErr } = await supabase.from('rr_properties').delete().eq('id', property.id).eq('user_id', uid);
+    if (rbErr) console.error('Rollback of property failed', rbErr);
+    throw error;
+  }
+  return property;
 }
 
 // ---------- Leads ----------
 export async function fetchLeads(): Promise<Lead[]> {
-  const { data, error } = await supabase.from('rr_leads').select('*').order('created_at', { ascending: false });
+  const uid = await ownerId();
+  const { data, error } = await supabase.from('rr_leads').select('*').eq('user_id', uid).order('created_at', { ascending: false });
   if (error) throw error;
   return (data || []).map(mapLead);
 }
 
 export async function updateLeadStatus(id: string, status: string) {
-  const { error } = await supabase.from('rr_leads').update({ status }).eq('id', id);
+  const uid = await ownerId();
+  const { error } = await supabase.from('rr_leads').update({ status }).eq('id', id).eq('user_id', uid);
   if (error) throw error;
 }
