@@ -1,3 +1,4 @@
+import { toast } from '@/components/ui/use-toast';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
@@ -55,7 +56,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast({ title: 'Sign out failed', description: error.message, variant: 'destructive' });
+      throw error;
+    }
   };
 
   const resetPassword = async (email: string) => {

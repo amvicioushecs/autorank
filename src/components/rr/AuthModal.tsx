@@ -50,8 +50,8 @@ const AuthModal: React.FC = () => {
         await resetPassword(email);
         setInfo('Password reset link sent. Check your inbox.');
       }
-    } catch (err: any) {
-      setError(err?.message || 'Something went wrong.');
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : "") || 'Something went wrong.');
     } finally {
       setBusy(false);
     }

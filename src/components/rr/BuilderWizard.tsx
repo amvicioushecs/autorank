@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Check, Hammer, Globe, FileText, Search, Rocket, Loader2, ChevronRight, Sparkles } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { useRRData } from '@/contexts/RRDataContext';
@@ -20,6 +20,9 @@ const BuilderWizard: React.FC<{ onDeployed?: () => void }> = ({ onDeployed }) =>
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
+  const savingRef = useRef(false);
+  const onDeployedRef = useRef(onDeployed);
+  onDeployedRef.current = onDeployed;
 
   useEffect(() => {
     if (!running) return;
@@ -29,17 +32,20 @@ const BuilderWizard: React.FC<{ onDeployed?: () => void }> = ({ onDeployed }) =>
         setRunning(false);
         setStep((s) => s + 1);
       } else {
-        // final deploy: persist to database
+        // final deploy: persist to database exactly once
+        setRunning(false);
+        if (savingRef.current) return;
+        savingRef.current = true;
         (async () => {
           try {
             await createProperty({ domain, niche, city, status: 'building', health: 42, keywords: 14 });
             toast({ title: 'Property Live', description: `${domain} saved to database. SEO Optimizer now monitoring rankings.` });
             setDone(true);
-            onDeployed?.();
+            onDeployedRef.current?.();
           } catch (e) {
-            toast({ title: 'Deploy failed', description: 'Could not save property to database.', variant: 'destructive' });
+            toast({ title: 'Deploy failed', description: e instanceof Error ? e.message : 'Could not save property to database.', variant: 'destructive' });
           } finally {
-            setRunning(false);
+            savingRef.current = false;
           }
         })();
       }
@@ -47,7 +53,7 @@ const BuilderWizard: React.FC<{ onDeployed?: () => void }> = ({ onDeployed }) =>
     }
     const t = setTimeout(() => setProgress((p) => Math.min(100, p + 8)), 90);
     return () => clearTimeout(t);
-  }, [running, progress, step, domain, niche, city, createProperty, onDeployed]);
+  }, [running, progress, step, domain, niche, city, createProperty]);
 
   const advance = () => {
     if (step === 0 && (!niche || !city)) {

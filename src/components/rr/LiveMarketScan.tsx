@@ -34,8 +34,8 @@ const LiveMarketScan: React.FC = () => {
       setRows(mapped);
       setMeta({ cost: res.costMicro, servedBy: res.servedBy });
       if (mapped.length === 0) setError('No volume data returned for those keywords — try a broader niche or bigger cities.');
-    } catch (err: any) {
-      setError(err.message || 'Scan failed');
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : "") || 'Scan failed');
     } finally {
       setScanning(false);
     }
@@ -54,8 +54,8 @@ const LiveMarketScan: React.FC = () => {
       });
       setSaved((s) => new Set(s).add(r.keyword));
       toast({ title: 'Opportunity saved', description: `"${r.keyword}" added to your private pipeline.` });
-    } catch (err: any) {
-      toast({ title: 'Save failed', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      toast({ title: 'Save failed', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     }
   };
 

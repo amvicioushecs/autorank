@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import { toast } from '@/components/ui/use-toast';
 import { Property, Opportunity, Lead } from '@/data/platformData';
 import * as api from '@/lib/rrApi';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,12 +9,13 @@ interface RRData {
   opportunities: Opportunity[];
   leads: Lead[];
   loading: boolean;
+  error: string | null;
   refresh: () => Promise<void>;
   createProperty: typeof api.createProperty;
   createOpportunity: typeof api.createOpportunity;
   deployOpportunity: (o: Opportunity) => Promise<void>;
   setLeadStatus: (id: string, status: Lead['status']) => Promise<void>;
-  assignClient: (id: string, client: string, mrr: number) => Promise<void>;
+  assignClient: (id: string, client: string | null, mrr: number) => Promise<void>;
 }
 
 const Ctx = createContext<RRData | null>(null);
@@ -25,6 +27,7 @@ export const RRDataProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -32,8 +35,12 @@ export const RRDataProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setProperties(p);
       setOpportunities(o);
       setLeads(l);
+      setError(null);
     } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
       console.error('RR data load failed', e);
+      setError(msg);
+      toast({ title: 'Could not load your portfolio', description: msg, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -54,39 +61,41 @@ export const RRDataProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => { cancelled = true; };
   }, [userId, refresh]);
 
-  const createProperty: typeof api.createProperty = async (p) => {
+  const createProperty = useCallback<typeof api.createProperty>(async (p) => {
     const created = await api.createProperty(p);
     setProperties((prev) => [created, ...prev]);
     return created;
-  };
+  }, []);
 
-  const createOpportunity: typeof api.createOpportunity = async (o) => {
+  const createOpportunity = useCallback<typeof api.createOpportunity>(async (o) => {
     const created = await api.createOpportunity(o);
     setOpportunities((prev) => [created, ...prev].sort((a, b) => b.score - a.score));
     return created;
-  };
+  }, []);
 
-  const deployOpportunity = async (o: Opportunity) => {
+  const deployOpportunity = useCallback(async (o: Opportunity) => {
     const created = await api.deployOpportunity(o);
     setOpportunities((prev) => prev.filter((x) => x.id !== o.id));
     setProperties((prev) => [created, ...prev]);
-  };
+  }, []);
 
-  const setLeadStatus = async (id: string, status: Lead['status']) => {
+  const setLeadStatus = useCallback(async (id: string, status: Lead['status']) => {
     await api.updateLeadStatus(id, status);
     setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status } : l)));
-  };
+  }, []);
 
-  const assignClient = async (id: string, client: string, mrr: number) => {
+  const assignClient = useCallback(async (id: string, client: string | null, mrr: number) => {
     await api.updatePropertyClient(id, client, mrr);
-    setProperties((prev) => prev.map((p) => (p.id === id ? { ...p, client, mrr, status: 'rented' } : p)));
-  };
+    const status = api.clientStatus(client);
+    setProperties((prev) => prev.map((p) => (p.id === id ? { ...p, client, mrr, status } : p)));
+  }, []);
 
-  return (
-    <Ctx.Provider value={{ properties, opportunities, leads, loading, refresh, createProperty, createOpportunity, deployOpportunity, setLeadStatus, assignClient }}>
-      {children}
-    </Ctx.Provider>
+  const value = useMemo<RRData>(
+    () => ({ properties, opportunities, leads, loading, error, refresh, createProperty, createOpportunity, deployOpportunity, setLeadStatus, assignClient }),
+    [properties, opportunities, leads, loading, error, refresh, createProperty, createOpportunity, deployOpportunity, setLeadStatus, assignClient],
   );
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 };
 
 export const useRRData = (): RRData => {

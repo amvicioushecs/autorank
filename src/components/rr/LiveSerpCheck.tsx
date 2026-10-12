@@ -28,8 +28,8 @@ const LiveSerpCheck: React.FC = () => {
       const res = await fetchSerp(keyword.trim(), 10);
       setResults(res.results);
       if (res.results.length === 0) setError('No organic results returned for that keyword.');
-    } catch (err: any) {
-      setError(err.message || 'SERP check failed');
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : "") || 'SERP check failed');
     } finally {
       setLoading(false);
       loadUsage();
