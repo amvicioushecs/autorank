@@ -23,6 +23,8 @@ const mapProperty = (r: Row): Property => ({
   siteUrl: r.site_url ?? null,
   deployedAt: r.deployed_at ?? null,
   deployError: r.deploy_error ?? null,
+  forwardEmail: r.forward_email ?? null,
+  forwardPhone: r.forward_phone ?? null,
 });
 
 const mapOpportunity = (r: Row): Opportunity => ({
@@ -113,8 +115,17 @@ export async function updatePropertyClient(id: string, client: string | null, mr
 }
 
 export async function updatePropertyPhone(id: string, phone: string | null) {
+  return updatePropertyContact(id, { phone });
+}
+
+/** Tracking number and where leads are routed (email/phone of the renter). */
+export async function updatePropertyContact(id: string, c: { phone?: string | null; forwardEmail?: string | null; forwardPhone?: string | null }) {
   const uid = await ownerId();
-  const { error } = await supabase.from('rr_properties').update({ phone }).eq('id', id).eq('user_id', uid);
+  const patch: Record<string, string | null> = {};
+  if (c.phone !== undefined) patch.phone = c.phone;
+  if (c.forwardEmail !== undefined) patch.forward_email = c.forwardEmail;
+  if (c.forwardPhone !== undefined) patch.forward_phone = c.forwardPhone;
+  const { error } = await supabase.from('rr_properties').update(patch).eq('id', id).eq('user_id', uid);
   if (error) throw error;
 }
 
