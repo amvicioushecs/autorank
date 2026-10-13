@@ -48,7 +48,7 @@ Edge function secrets (server only):
 | --- | --- |
 | `TREG_API_KEY` | treg.to org token (sent as `X-Treg-Token`) |
 | `TREG_MAX_COST_USD` | optional per-call spend cap, default `0.25` |
-| `TREG_DAILY_BUDGET_USD` | optional per-user rolling 24h cap, default `2` |
+| `TREG_DAILY_BUDGET_USD` | optional per-user rolling 24h cap, default `2`. Enforced atomically: each call reserves `TREG_MAX_COST_USD` up front (`rr_treg_reserve`) and settles the real cost after. Invalid values fail closed. All treg-calling functions need `SUPABASE_SERVICE_ROLE_KEY` (auto-injected by Supabase) to write the ledger. |
 
 ## Supabase backend
 Schema lives in `supabase/migrations/` (base tables + RLS, client portal tokens, and later phases).

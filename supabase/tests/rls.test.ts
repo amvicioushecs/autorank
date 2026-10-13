@@ -13,8 +13,9 @@ beforeAll(async () => {
       await db.exec(`insert into rr_properties (domain, niche, city) values ('${u.slice(-1)}.com', 'Plumbing', 'Austin, TX')`);
       await db.exec(`insert into rr_opportunities (niche, city) values ('Roofing', 'Mesa, AZ')`);
       await db.exec(`insert into rr_leads (property, name) values ('${u.slice(-1)}.com', 'Lead ${u.slice(-1)}')`);
-      await db.exec(`insert into rr_treg_usage (endpoint, cost_micro) values ('treg.google.serp.organic', 150)`);
     });
+    // Usage ledger rows are written by the server (service role), never by users.
+    await db.exec(`insert into rr_treg_usage (user_id, endpoint, cost_micro) values ('${u}', 'treg.google.serp.organic', 150)`);
   }
 });
 
