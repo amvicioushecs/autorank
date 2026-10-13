@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRRData } from '@/contexts/RRDataContext';
 import { Property } from '@/data/platformData';
-import { Users, Link2, Copy, Check, Mail, Eye, Inbox, DollarSign, TrendingUp, Loader2, FileSignature } from 'lucide-react';
+import { Users, Link2, Copy, Check, Mail, Eye, Inbox, DollarSign, TrendingUp, Loader2, FileSignature, ShieldOff } from 'lucide-react';
+import { createPortalToken, revokePortalTokens, portalUrl, inviteMailto } from '@/lib/portalApi';
 import { toast } from '@/components/ui/use-toast';
 
 const ClientPortal: React.FC = () => {
@@ -11,10 +12,9 @@ const ClientPortal: React.FC = () => {
   const [clientName, setClientName] = useState('');
   const [rent, setRent] = useState('1500');
   const [copied, setCopied] = useState(false);
-  const [sending, setSending] = useState(false);
   const [leasing, setLeasing] = useState(false);
-  const [phone, setPhone] = useState('');
-  const [smsOptIn, setSmsOptIn] = useState(true);
+  const [link, setLink] = useState<string | null>(null);
+  const [linkBusy, setLinkBusy] = useState(false);
 
   useEffect(() => {
     if (!selectedId && properties.length) {
@@ -22,6 +22,9 @@ const ClientPortal: React.FC = () => {
       setSelectedId(firstRented.id);
     }
   }, [properties, selectedId]);
+
+  // A plaintext link is only known right after creation; clear it when switching property.
+  useEffect(() => { setLink(null); }, [selectedId]);
 
   const selected: Property | undefined = properties.find((p) => p.id === selectedId);
   if (!selected) {
@@ -31,12 +34,33 @@ const ClientPortal: React.FC = () => {
     return <div className="text-center py-20 text-slate-500 flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Loading properties...</div>;
   }
 
-  const link = `https://portal.rankforge.io/c/${selected.id.slice(0, 8)}-${selected.domain.split('.')[0]}`;
+  const generateLink = async () => {
+    setLinkBusy(true);
+    try {
+      const token = await createPortalToken(selected.id);
+      setLink(portalUrl(token));
+      toast({ title: 'Access link created', description: 'Valid for 90 days. Copy it now; it will not be shown again.' });
+    } catch (e) {
+      toast({ title: 'Could not create link', description: e instanceof Error ? e.message : String(e), variant: 'destructive' });
+    } finally { setLinkBusy(false); }
+  };
+
+  const revokeLinks = async () => {
+    setLinkBusy(true);
+    try {
+      await revokePortalTokens(selected.id);
+      setLink(null);
+      toast({ title: 'Links revoked', description: `All client links for ${selected.domain} stopped working.` });
+    } catch (e) {
+      toast({ title: 'Revoke failed', description: e instanceof Error ? e.message : String(e), variant: 'destructive' });
+    } finally { setLinkBusy(false); }
+  };
 
   const copyLink = () => {
+    if (!link) return;
     navigator.clipboard?.writeText(link);
     setCopied(true);
-    toast({ title: 'Access link copied', description: 'Share with your renter for their branded dashboard.' });
+    toast({ title: 'Access link copied', description: 'Share it only with your renter.' });
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -48,35 +72,23 @@ const ClientPortal: React.FC = () => {
       toast({ title: 'Lease activated', description: `${selected.domain} is now rented to ${clientName} at $${rent}/mo (saved to database).` });
       setClientName('');
     } catch (e) {
-      toast({ title: 'Lease failed', description: 'Could not save assignment.', variant: 'destructive' });
+      toast({ title: 'Lease failed', description: e instanceof Error ? e.message : 'Could not save assignment.', variant: 'destructive' });
     } finally { setLeasing(false); }
   };
 
-  const invite = async (e: React.FormEvent) => {
+  const invite = (e: React.FormEvent) => {
     e.preventDefault();
     if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) {
       toast({ title: 'Enter a valid email', variant: 'destructive' });
       return;
     }
-    setSending(true);
-    try {
-      await fetch('https://famous.ai/api/crm/6a19aa7e9b69056178b8830a/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          name: selected.client || undefined,
-          phone: phone.trim() || undefined,
-          sms_opt_in: smsOptIn === true,
-          source: 'client-portal',
-          tags: ['client-portal', selected.niche.toLowerCase()],
-        }),
-      });
-    } catch (_) { /* ignore */ }
-    setSending(false);
+    if (!link) {
+      toast({ title: 'Generate an access link first', variant: 'destructive' });
+      return;
+    }
+    // Opens your own mail client with the link pre-filled; nothing is sent automatically.
+    window.location.href = inviteMailto(email, selected.domain, link);
     setEmail('');
-    setPhone('');
-    toast({ title: 'Portal invite sent', description: `Restricted Client View access granted for ${selected.domain}.` });
   };
 
   return (
@@ -116,17 +128,26 @@ const ClientPortal: React.FC = () => {
             </div>
           )}
 
-          <label className="text-xs text-slate-400 mb-1.5 block">Unique Access Link</label>
-          <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 mb-4">
-            <Link2 className="w-4 h-4 text-slate-500 shrink-0" />
-            <span className="text-xs text-slate-300 font-mono truncate flex-1">{link}</span>
-            <button onClick={copyLink} className="text-slate-400 hover:text-white shrink-0">
-              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+          <label className="text-xs text-slate-400 mb-1.5 block">Secure Access Link</label>
+          {link ? (
+            <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 mb-2">
+              <Link2 className="w-4 h-4 text-slate-500 shrink-0" />
+              <span className="text-xs text-slate-300 font-mono truncate flex-1" data-testid="portal-link">{link}</span>
+              <button onClick={copyLink} aria-label="Copy link" className="text-slate-400 hover:text-white shrink-0">
+                {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+          ) : (
+            <button onClick={generateLink} disabled={linkBusy} className="w-full mb-2 flex items-center justify-center gap-2 bg-slate-800 border border-slate-700 hover:border-sky-500 rounded-lg px-3 py-2.5 text-sm text-white disabled:opacity-60">
+              {linkBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />} Generate access link
             </button>
-          </div>
+          )}
+          <button onClick={revokeLinks} disabled={linkBusy} className="mb-4 flex items-center gap-1.5 text-[11px] text-slate-500 hover:text-rose-400 disabled:opacity-60">
+            <ShieldOff className="w-3.5 h-3.5" /> Revoke all links for this property
+          </button>
 
           <form onSubmit={invite}>
-            <label className="text-xs text-slate-400 mb-1.5 block">Invite Client by Email</label>
+            <label className="text-xs text-slate-400 mb-1.5 block">Email the link to your client</label>
             <div className="flex gap-2">
               <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 flex-1">
                 <Mail className="w-4 h-4 text-slate-500" />
@@ -138,24 +159,12 @@ const ClientPortal: React.FC = () => {
                   className="bg-transparent text-sm text-white placeholder:text-slate-600 outline-none w-full"
                 />
               </div>
-              <button type="submit" disabled={sending} className="flex items-center gap-2 bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-900 font-semibold text-sm px-4 rounded-lg disabled:opacity-60">
-                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Invite'}
+              <button type="submit" className="flex items-center gap-2 bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-900 font-semibold text-sm px-4 rounded-lg">
+                Compose
               </button>
             </div>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="Phone number (optional)"
-              aria-label="Phone number (optional)"
-              className="mt-2 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-600 outline-none focus:border-sky-500"
-            />
-            <label className="mt-2 flex items-start gap-2 text-[11px] text-slate-400 cursor-pointer">
-              <input type="checkbox" checked={smsOptIn} onChange={(e) => setSmsOptIn(e.target.checked)} className="mt-0.5 accent-sky-500" />
-              Text me updates. Msg &amp; data rates may apply. Reply STOP to unsubscribe.
-            </label>
           </form>
-          <p className="text-[11px] text-slate-500 mt-2">Grants a restricted "Client View" with their lead metrics &amp; billing status.</p>
+          <p className="text-[11px] text-slate-500 mt-2">Links are random, hashed at rest, expire after 90 days and can be revoked anytime.</p>
         </div>
 
         <div className="rounded-xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-900/40 p-5">

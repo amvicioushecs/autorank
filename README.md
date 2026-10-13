@@ -26,7 +26,10 @@ npm run dev
 | `npm test` | Vitest (jsdom) |
 | `npm run build` | Production build |
 
-CI (`.github/workflows/ci.yml`) runs install, lint, typecheck, test and build on every PR.
+CI (`.github/workflows/ci.yml`) runs install, lint (zero warnings), typecheck, test and build, plus `deno lint`/`deno check` for edge functions. Database tests run every migration in [PGlite](https://pglite.dev) (in-memory Postgres) with a small Supabase stub, so RLS is tested without Docker.
+
+## Client portal
+Owners generate a link per property in **Client Portal**. Links look like `https://<your-app>/portal/<token>`, expire after 90 days, are stored only as hashes, and can be revoked. The SPA host must rewrite all paths to `index.html` (`public/_redirects` for Netlify, `vercel.json` for Vercel are included).
 
 ## Environment variables
 Frontend (public, `VITE_` prefix):
@@ -45,6 +48,7 @@ Edge function secrets (server only):
 | --- | --- |
 | `TREG_API_KEY` | treg.to org token (sent as `X-Treg-Token`) |
 | `TREG_MAX_COST_USD` | optional per-call spend cap, default `0.25` |
+| `TREG_DAILY_BUDGET_USD` | optional per-user rolling 24h cap, default `2` |
 
 ## Supabase backend
 The database schema is **not yet in this repo** (roadmap task 1.1). The app expects these tables,
@@ -62,7 +66,7 @@ The client also filters every query by `user_id`, but RLS is the real security b
 ```bash
 supabase login
 supabase link --project-ref <your-project-ref>
-supabase secrets set TREG_API_KEY=<your treg token>
+supabase secrets set TREG_API_KEY=your-treg-token   # replace with your real token
 supabase functions deploy treg-proxy
 ```
 The function (`supabase/functions/treg-proxy/index.ts`) requires a signed-in user, only allows the
