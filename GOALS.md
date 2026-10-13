@@ -70,9 +70,10 @@ Legend: `[x]` done · `[ ]` todo. **(PR #foundation)** = completed by the `senio
 - [x] 0.10 Vitest + Testing Library + `npm test`; GitHub Actions CI. (PR #foundation)
 - [x] 0.11 `treg-proxy` edge function in repo. (PR #foundation)
 - [x] 0.12 Real README + this GOALS.md. (PR #foundation)
-- [ ] 0.13 Remove the hard-coded Supabase fallback once env vars are set in all deploys.
-- [ ] 0.14 Remove unused deps (Stripe until billing, etc.) and duplicate toast hook; fix 12 lint warnings.
-- [ ] 0.15 Replace fake client-portal link with a real route.
+- [ ] 0.13 Remove the hard-coded Supabase fallback once env vars are set in all deploys. *Deferred (PR #phase0): not safe until Hector confirms `VITE_SUPABASE_*` is set in every deploy target; removing it now would blank the live app.*
+- [x] 0.14 Remove unused deps (Stripe, zod, hookform resolvers, date-fns, marked, highlight.js, @types/uuid); lint warnings 12 → 0 and CI now fails on any warning. (PR #phase0) *`components/ui/use-toast.ts` is the standard shadcn re-export, kept.*
+- [x] 0.15 Real client portal: `/portal/:token` route, random 256-bit-ish tokens stored as SHA-256 hashes, 90-day expiry, revocable, anon read via `rr_portal_view` RPC; removed third-party CRM post of client email/phone; invite opens your own mail client. *AC: PGlite tests for token isolation/expiry/revocation.* (PR #phase0)
+- [x] 0.16 Review fixes from PR #1: deploy button disabled while saving; zero-row opportunity update triggers rollback; per-user 24h treg budget (`TREG_DAILY_BUDGET_USD`); `.env.*` ignored; Deno lint + type-check for edge functions in CI. (PR #phase0)
 
 ### Phase 1 — Backend in source control
 - [ ] 1.1 Dump current schema into `supabase/migrations/` (tables, RLS, `rr_seed_starter`). *AC: `supabase db reset` reproduces the app.*

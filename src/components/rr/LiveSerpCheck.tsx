@@ -16,9 +16,10 @@ const LiveSerpCheck: React.FC = () => {
   const loadUsage = () => fetchTregUsage(25).then(setUsage).catch(() => {});
   useEffect(() => { loadUsage(); }, []);
 
+  const seedKeyword = prop ? `${prop.niche} ${prop.city.split(',')[0]}`.toLowerCase() : null;
   useEffect(() => {
-    if (prop) setKeyword(`${prop.niche} ${prop.city.split(',')[0]}`.toLowerCase());
-  }, [prop?.id]);
+    if (seedKeyword) setKeyword(seedKeyword);
+  }, [seedKeyword]);
 
   const run = async (e?: React.FormEvent) => {
     e?.preventDefault();

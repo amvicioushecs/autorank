@@ -10,7 +10,7 @@
 // Secrets: TREG_API_KEY (required). SUPABASE_URL / SUPABASE_ANON_KEY are injected by Supabase.
 // treg docs: https://treg.to/docs  (POST https://treg.to/call/<endpoint_id>, header X-Treg-Token)
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const TREG_BASE = 'https://treg.to';
 
@@ -19,6 +19,8 @@ const ALLOWED_ENDPOINTS = new Set(['treg.google.keywords.volume', 'treg.google.s
 
 // Hard per-call spend cap passed to treg's router (USD).
 const MAX_COST_USD = Deno.env.get('TREG_MAX_COST_USD') ?? '0.25';
+// Per-user rolling 24h spend cap (USD) so one account cannot drain the shared prepaid balance.
+const DAILY_BUDGET_MICRO = Math.round(Number(Deno.env.get('TREG_DAILY_BUDGET_USD') ?? '2') * 1_000_000);
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -53,6 +55,18 @@ Deno.serve(async (req) => {
   }
   const endpoint = payload.endpoint ?? '';
   if (!ALLOWED_ENDPOINTS.has(endpoint)) return json({ error: `Endpoint not allowed: ${endpoint}` }, 400);
+
+  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  const { data: spentRows, error: spentErr } = await supabase
+    .from('rr_treg_usage')
+    .select('cost_micro')
+    .eq('user_id', user.id)
+    .gte('created_at', since);
+  if (spentErr) return json({ error: `Could not check usage budget: ${spentErr.message}` }, 500);
+  const spent = (spentRows ?? []).reduce((sum: number, r: { cost_micro: number | null }) => sum + (Number(r.cost_micro) || 0), 0);
+  if (spent >= DAILY_BUDGET_MICRO) {
+    return json({ error: `Daily treg budget reached ($${(spent / 1e6).toFixed(2)} of $${(DAILY_BUDGET_MICRO / 1e6).toFixed(2)}). Try again later.` }, 429);
+  }
 
   let upstream: Response;
   try {
