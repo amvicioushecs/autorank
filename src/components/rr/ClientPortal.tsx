@@ -3,6 +3,7 @@ import { useRRData } from '@/contexts/RRDataContext';
 import { Property } from '@/data/platformData';
 import { Users, Link2, Copy, Check, Mail, Eye, Inbox, DollarSign, TrendingUp, Loader2, FileSignature, ShieldOff } from 'lucide-react';
 import { createPortalToken, revokePortalTokens, portalUrl, inviteMailto } from '@/lib/portalApi';
+import { createCheckoutLink } from '@/lib/billingApi';
 import { toast } from '@/components/ui/use-toast';
 
 const ClientPortal: React.FC = () => {
@@ -13,6 +14,8 @@ const ClientPortal: React.FC = () => {
   const [rent, setRent] = useState('1500');
   const [copied, setCopied] = useState(false);
   const [leasing, setLeasing] = useState(false);
+  const [clientEmail, setClientEmail] = useState('');
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
   const [linkBusy, setLinkBusy] = useState(false);
 
@@ -24,7 +27,7 @@ const ClientPortal: React.FC = () => {
   }, [properties, selectedId]);
 
   // A plaintext link is only known right after creation; clear it when switching property.
-  useEffect(() => { setLink(null); }, [selectedId]);
+  useEffect(() => { setLink(null); setCheckoutUrl(null); }, [selectedId]);
 
   const selected: Property | undefined = properties.find((p) => p.id === selectedId);
   if (!selected) {
@@ -62,6 +65,21 @@ const ClientPortal: React.FC = () => {
     setCopied(true);
     toast({ title: 'Access link copied', description: 'Share it only with your renter.' });
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const billViaStripe = async () => {
+    if (!clientName.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clientEmail.trim())) {
+      toast({ title: 'Enter client name and a valid billing email', variant: 'destructive' });
+      return;
+    }
+    setLeasing(true);
+    try {
+      const r = await createCheckoutLink({ propertyId: selected.id, clientName: clientName.trim(), clientEmail: clientEmail.trim(), monthlyRent: parseInt(rent) || 0 });
+      setCheckoutUrl(r.url);
+      toast({ title: 'Checkout link ready', description: 'Send it to the client. The property flips to Rented when they pay.' });
+    } catch (e) {
+      toast({ title: 'Could not create checkout', description: e instanceof Error ? e.message : String(e), variant: 'destructive' });
+    } finally { setLeasing(false); }
   };
 
   const lease = async () => {
@@ -122,9 +140,17 @@ const ClientPortal: React.FC = () => {
                   <span className="text-slate-600 text-[10px]">/mo</span>
                 </div>
               </div>
-              <button onClick={lease} disabled={leasing} className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold text-sm py-2 rounded-lg disabled:opacity-60">
-                {leasing ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSignature className="w-4 h-4" />} Activate Lease &amp; Bill via Stripe
+              <input value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} type="email" placeholder="Billing email" aria-label="Billing email" className="w-full mb-2 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-sky-500" />
+              <button onClick={billViaStripe} disabled={leasing} className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold text-sm py-2 rounded-lg disabled:opacity-60">
+                {leasing ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSignature className="w-4 h-4" />} Create Stripe checkout link
               </button>
+              {checkoutUrl && (
+                <div className="mt-2 flex items-center gap-2 bg-slate-800 rounded-lg px-2 py-1.5">
+                  <span className="text-[11px] text-slate-300 font-mono truncate flex-1">{checkoutUrl}</span>
+                  <button onClick={() => { navigator.clipboard?.writeText(checkoutUrl); toast({ title: 'Checkout link copied' }); }} aria-label="Copy checkout link" className="text-slate-400 hover:text-white"><Copy className="w-3.5 h-3.5" /></button>
+                </div>
+              )}
+              <button onClick={lease} disabled={leasing} className="mt-2 w-full text-[11px] text-slate-400 hover:text-white">Record lease without Stripe (billed elsewhere)</button>
             </div>
           )}
 

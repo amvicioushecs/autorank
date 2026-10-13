@@ -10,3 +10,9 @@ verify_jwt = false
 
 [functions.twilio-voice]
 verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.portal-billing]
+verify_jwt = false

@@ -105,9 +105,9 @@ Legend: `[x]` done · `[ ]` todo. **(PR #foundation)** = completed by the `senio
 - [x] 5.3 Email forwarding via Resend when `forward_email` + `RESEND_API_KEY` are set; routing fields in the property drawer. (PR #phase5) *SMS not yet.*
 
 ### Phase 6 — Clients, renting & billing
-- [ ] 6.1 `rr_clients` table and client assignment by id (not free text).
-- [ ] 6.2 Stripe subscription per rented property; webhooks update MRR/status.
-- [ ] 6.3 Client portal (magic link): their leads, calls, invoices.
+- [x] 6.1 `rr_clients` (owner RLS) linked from properties by `client_id`; created on checkout. (PR #phase6)
+- [x] 6.2 `billing-checkout` (monthly subscription Checkout link per property) + `stripe-webhook` (signature-verified, idempotent; rented/MRR on payment, past_due alerts, churn → back to ranking). (PR #phase6)
+- [x] 6.3 Portal shows leads/calls, rent and billing status; `portal-billing` opens Stripe's billing portal (invoices, card, cancel) for that client only. (PR #phase6)
 - [ ] 6.4 Outreach pipeline to find/pitch local businesses for unrented sites.
 
 ### Phase 7 — Ops
