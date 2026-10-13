@@ -76,10 +76,10 @@ Legend: `[x]` done · `[ ]` todo. **(PR #foundation)** = completed by the `senio
 - [x] 0.16 Review fixes from PR #1: deploy button disabled while saving; zero-row opportunity update triggers rollback; per-user 24h treg budget (`TREG_DAILY_BUDGET_USD`); `.env.*` ignored; Deno lint + type-check for edge functions in CI. (PR #phase0)
 
 ### Phase 1 — Backend in source control
-- [ ] 1.1 Dump current schema into `supabase/migrations/` (tables, RLS, `rr_seed_starter`). *AC: `supabase db reset` reproduces the app.*
-- [ ] 1.2 RLS test: user A cannot read/write user B rows. *AC: SQL/pgTAP or integration test in CI.*
+- [x] 1.1 Schema in `supabase/migrations/20261012000000_base_schema.sql`: all `rr_*` tables, constraints, indexes, owner-only RLS, append-only usage log, `rr_seed_starter`. Idempotent for the existing project. (PR #phase1) *Written from how the app uses the tables, not dumped from the live DB; diff against `supabase db diff` before pushing.*
+- [x] 1.2 RLS tests in CI (PGlite): isolation for read/update/delete/insert, anon denied, append-only usage, seed idempotency. (PR #phase1)
 - [ ] 1.3 Deploy `treg-proxy` with `TREG_API_KEY`; verify a live keyword call end-to-end. *AC: LiveMarketScan returns rows; usage row logged.*
-- [ ] 1.4 Generate typed DB client (`supabase gen types`) and drop `any` row types.
+- [ ] 1.4 Generate typed DB client (`supabase gen types`) and drop `any` row types. *Needs Supabase project access.*
 
 ### Phase 2 — Discovery automation
 - [ ] 2.1 Niche + city seed lists table. *AC: CRUD in UI.*

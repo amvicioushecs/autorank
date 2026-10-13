@@ -7,7 +7,7 @@ let db: PGlite;
 let propA: string;
 
 beforeEach(async () => {
-  db = await freshDb(['legacy_tables.sql']);
+  db = await freshDb();
   const r = await db.query<{ id: string }>(`insert into rr_properties (user_id, domain, niche, city, client, rank_position, monthly_leads)
     values ('${A}', 'a-plumber.com', 'Plumbing', 'Austin, TX', 'BlueFlow', 3, 12) returning id`);
   propA = r.rows[0].id;

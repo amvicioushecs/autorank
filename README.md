@@ -51,16 +51,17 @@ Edge function secrets (server only):
 | `TREG_DAILY_BUDGET_USD` | optional per-user rolling 24h cap, default `2` |
 
 ## Supabase backend
-The database schema is **not yet in this repo** (roadmap task 1.1). The app expects these tables,
-each with a `user_id uuid` column and RLS policies `user_id = auth.uid()`:
+Schema lives in `supabase/migrations/` (base tables + RLS, client portal tokens, and later phases).
+Every `rr_*` row has a `user_id` and owner-only RLS; the client also filters by `user_id`.
 
-- `rr_properties` – id, user_id, domain, niche, city, status, health, rank_position, rank_change, keywords, monthly_leads, mrr, client, trend (int[]/jsonb)
-- `rr_opportunities` – id, user_id, niche, city, search_volume, competition, cpc, est_revenue, score, deployed
-- `rr_leads` – id, user_id, property, niche, name, service, value, quality, status, channel, created_at
-- `rr_treg_usage` – id, user_id, endpoint, cost_micro, call_id, status, created_at
-- RPC `rr_seed_starter()` – seeds a starter portfolio for a new user, returns count
+```bash
+supabase link --project-ref your-project-ref
+supabase db diff          # review what would change on the live project first
+supabase db push          # apply migrations
+```
 
-The client also filters every query by `user_id`, but RLS is the real security boundary.
+`rr_seed_starter()` gives a new account five sample opportunities (no fake properties or revenue).
+Migrations are tested in CI by `supabase/tests/*.test.ts`, which run them in PGlite.
 
 ### Deploying the treg proxy
 ```bash
