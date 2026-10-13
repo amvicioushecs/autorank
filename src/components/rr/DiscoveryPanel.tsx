@@ -4,6 +4,9 @@ import { Opportunity } from '@/data/platformData';
 import { Radar, Search, TrendingUp, Target, DollarSign, Rocket, Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import LiveMarketScan from './LiveMarketScan';
+import DiscoverySeeds from './DiscoverySeeds';
+import { pickDomain } from '@/lib/discoveryApi';
+import { domainCandidates } from '../../../supabase/functions/_shared/discovery.ts';
 
 const ScoreRing: React.FC<{ score: number }> = ({ score }) => {
   const c = score >= 88 ? '#34d399' : score >= 80 ? '#38bdf8' : '#fbbf24';
@@ -21,7 +24,7 @@ const ScoreRing: React.FC<{ score: number }> = ({ score }) => {
 };
 
 const DiscoveryPanel: React.FC = () => {
-  const { opportunities, deployOpportunity, loading } = useRRData();
+  const { opportunities, deployOpportunity, loading, refresh } = useRRData();
   const [showLive, setShowLive] = useState(true);
   const [deploying, setDeploying] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -29,10 +32,14 @@ const DiscoveryPanel: React.FC = () => {
   const deploy = async (o: Opportunity) => {
     setDeploying(o.id);
     try {
-      await deployOpportunity(o);
-      toast({ title: 'Architect Agent triggered', description: `Property for "${o.niche}" saved to your portfolio — DNS, SSL & city pages queued.` });
+      const { domain, verified } = await pickDomain(domainCandidates(o.niche, o.city));
+      await deployOpportunity(o, domain);
+      toast({
+        title: 'Property created',
+        description: verified ? `${domain} is unregistered — register it, then build the site.` : `${domain} saved; availability could not be confirmed.`,
+      });
     } catch (e) {
-      toast({ title: 'Deployment failed', description: 'Could not save property.', variant: 'destructive' });
+      toast({ title: 'Deployment failed', description: e instanceof Error ? e.message : 'Could not save property.', variant: 'destructive' });
     } finally {
       setDeploying(null);
     }
@@ -59,6 +66,7 @@ const DiscoveryPanel: React.FC = () => {
         </button>
       </div>
 
+      <DiscoverySeeds onScanned={refresh} />
       {showLive && <LiveMarketScan />}
 
       <div className="flex items-center gap-2 bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-2 max-w-md">
