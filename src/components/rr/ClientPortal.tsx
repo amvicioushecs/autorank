@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRRData } from '@/contexts/RRDataContext';
 import { Property } from '@/data/platformData';
 import { Users, Link2, Copy, Check, Mail, Eye, Inbox, DollarSign, TrendingUp, Loader2, FileSignature, ShieldOff } from 'lucide-react';
@@ -18,6 +18,8 @@ const ClientPortal: React.FC = () => {
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
   const [linkBusy, setLinkBusy] = useState(false);
+  const selectedRef = useRef(selectedId);
+  selectedRef.current = selectedId;
 
   useEffect(() => {
     if (!selectedId && properties.length) {
@@ -40,7 +42,9 @@ const ClientPortal: React.FC = () => {
   const generateLink = async () => {
     setLinkBusy(true);
     try {
-      const token = await createPortalToken(selected.id);
+      const forId = selected.id;
+      const token = await createPortalToken(forId);
+      if (selectedRef.current !== forId) return; // selection changed while waiting
       setLink(portalUrl(token));
       toast({ title: 'Access link created', description: 'Valid for 90 days. Copy it now; it will not be shown again.' });
     } catch (e) {
@@ -74,7 +78,9 @@ const ClientPortal: React.FC = () => {
     }
     setLeasing(true);
     try {
-      const r = await createCheckoutLink({ propertyId: selected.id, clientName: clientName.trim(), clientEmail: clientEmail.trim(), monthlyRent: parseInt(rent) || 0 });
+      const forId = selected.id;
+      const r = await createCheckoutLink({ propertyId: forId, clientName: clientName.trim(), clientEmail: clientEmail.trim(), monthlyRent: parseInt(rent) || 0 });
+      if (selectedRef.current !== forId) return; // never show a link for a different property
       setCheckoutUrl(r.url);
       toast({ title: 'Checkout link ready', description: 'Send it to the client. The property flips to Rented when they pay.' });
     } catch (e) {

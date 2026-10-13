@@ -3,7 +3,7 @@
 // sync with subscriptions. Events: checkout.session.completed, customer.subscription.updated|deleted,
 // invoice.payment_failed. Secrets: STRIPE_WEBHOOK_SECRET, STRIPE_SECRET_KEY.
 import { handle, HttpError, json, serviceClient } from '../_shared/http.ts';
-import { mapSubscriptionStatus, stripe, verifyStripeSignature } from '../_shared/stripe.ts';
+import { invoiceSubscriptionId, mapSubscriptionStatus, stripe, verifyStripeSignature } from '../_shared/stripe.ts';
 
 type Meta = { autorank_user_id?: string; autorank_property_id?: string; autorank_client_id?: string; client_name?: string };
 
@@ -31,6 +31,13 @@ Deno.serve(handle(async (req) => {
     case 'checkout.session.completed': {
       if (!uid || !pid || obj.mode !== 'subscription') break;
       const subId = String(obj.subscription);
+      // Guard: a property holds one subscription. If another live one exists, cancel this duplicate.
+      const { data: cur } = await scoped().select('stripe_subscription_id, billing_status').eq('id', pid).eq('user_id', uid).maybeSingle();
+      if (cur?.stripe_subscription_id && cur.stripe_subscription_id !== subId && ['active', 'trialing', 'past_due'].includes(cur.billing_status ?? '')) {
+        await stripe(`subscriptions/${subId}`, {}, 'DELETE');
+        await db.from('rr_alerts').insert({ user_id: uid, property_id: pid, kind: 'payment_failed', message: `Duplicate checkout for this property was cancelled (${subId}); refund the first invoice in Stripe if it was charged.` });
+        break;
+      }
       const sub = await stripe<{ status: string; items: { data: { price: { unit_amount: number } }[] } }>(`subscriptions/${subId}`, {}, 'GET');
       const mrr = Math.round((sub.items?.data?.[0]?.price?.unit_amount ?? 0) / 100);
       const { rented, billingStatus } = mapSubscriptionStatus(sub.status);
@@ -59,7 +66,7 @@ Deno.serve(handle(async (req) => {
       break;
     }
     case 'invoice.payment_failed': {
-      const subId = String(obj.subscription ?? '');
+      const subId = invoiceSubscriptionId(obj);
       if (!subId) break;
       const { data: props } = await scoped().select('id, user_id, domain').eq('stripe_subscription_id', subId);
       for (const p of props ?? []) {

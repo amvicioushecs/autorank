@@ -53,16 +53,29 @@ export function mapSubscriptionStatus(status: string): { billingStatus: string; 
   }
 }
 
-export async function stripe<T = Record<string, unknown>>(path: string, params: Record<string, unknown> = {}, method = 'POST'): Promise<T> {
+export async function stripe<T = Record<string, unknown>>(path: string, params: Record<string, unknown> = {}, method = 'POST', idempotencyKey?: string): Promise<T> {
   const key = Deno.env.get('STRIPE_SECRET_KEY');
   if (!key) throw new Error('STRIPE_SECRET_KEY not configured');
   const body = formEncode(params);
   const res = await fetch(`https://api.stripe.com/v1/${path}${method === 'GET' && body ? `?${body}` : ''}`, {
     method,
-    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: {
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
+    },
     body: method === 'GET' ? undefined : body,
   });
   const data = await res.json();
   if (!res.ok) throw new Error(`Stripe: ${data?.error?.message ?? res.status}`);
   return data as T;
+}
+
+/** Subscription id on an invoice: legacy `invoice.subscription` or Basil+ `invoice.parent.subscription_details.subscription`. */
+export function invoiceSubscriptionId(invoice: Record<string, unknown>): string {
+  const legacy = invoice.subscription;
+  if (typeof legacy === 'string' && legacy) return legacy;
+  const parent = invoice.parent as { subscription_details?: { subscription?: string | { id?: string } } } | undefined;
+  const s = parent?.subscription_details?.subscription;
+  return typeof s === 'string' ? s : s?.id ?? '';
 }

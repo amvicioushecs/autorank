@@ -13,6 +13,7 @@ create unique index if not exists rr_clients_user_email_uq on public.rr_clients(
 alter table public.rr_properties add column if not exists client_id uuid references public.rr_clients(id) on delete set null;
 alter table public.rr_properties add column if not exists stripe_subscription_id text;
 alter table public.rr_properties add column if not exists billing_status text;
+create index if not exists rr_properties_stripe_sub_idx on public.rr_properties(stripe_subscription_id) where stripe_subscription_id is not null;
 
 -- Processed Stripe events (idempotency). Server-only: RLS on, no policies.
 create table if not exists public.rr_billing_events (
@@ -30,7 +31,11 @@ drop policy if exists rr_clients_owner on public.rr_clients;
 create policy rr_clients_owner on public.rr_clients for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 revoke all on public.rr_clients from anon;
-grant select, insert, update, delete on public.rr_clients to authenticated;
+-- stripe_customer_id is server-written only (billing-checkout via service role): portal-billing trusts it.
+revoke insert, update on public.rr_clients from authenticated;
+grant select, delete on public.rr_clients to authenticated;
+grant insert (user_id, name, email, phone) on public.rr_clients to authenticated;
+grant update (name, email, phone) on public.rr_clients to authenticated;
 
 -- Portal view now also returns billing status and rent.
 create or replace function public.rr_portal_view(p_token text)

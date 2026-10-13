@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
 import { createHmac } from 'node:crypto';
-import { formEncode, verifyStripeSignature, mapSubscriptionStatus } from '../functions/_shared/stripe.ts';
+import { formEncode, verifyStripeSignature, mapSubscriptionStatus, invoiceSubscriptionId } from '../functions/_shared/stripe.ts';
 import { freshDb, as, A, B } from './db';
 
 describe('stripe helpers', () => {
@@ -20,6 +20,12 @@ describe('stripe helpers', () => {
     expect(await verifyStripeSignature(body, null, 'whsec_test')).toBe(false);
   });
 
+  it('reads invoice subscription ids on legacy and Basil API versions', () => {
+    expect(invoiceSubscriptionId({ subscription: 'sub_1' })).toBe('sub_1');
+    expect(invoiceSubscriptionId({ parent: { subscription_details: { subscription: 'sub_2' } } })).toBe('sub_2');
+    expect(invoiceSubscriptionId({})).toBe('');
+  });
+
   it('maps subscription states', () => {
     expect(mapSubscriptionStatus('active')).toEqual({ billingStatus: 'active', rented: true });
     expect(mapSubscriptionStatus('past_due').rented).toBe(true);
@@ -30,7 +36,12 @@ describe('stripe helpers', () => {
 describe('billing schema', () => {
   it('isolates clients, hides billing events, and exposes billing info only via portal token', async () => {
     const db = await freshDb();
-    const c = await as(db, A, () => db.query<{ id: string }>(`insert into rr_clients (name, email, stripe_customer_id) values ('Acme', 'a@acme.com', 'cus_1') returning id`));
+    const c = await as(db, A, () => db.query<{ id: string }>(`insert into rr_clients (name, email) values ('Acme', 'a@acme.com') returning id`));
+    // Owners cannot set or change the Stripe customer id (portal-billing trusts it)
+    await expect(as(db, A, () => db.query(`update rr_clients set stripe_customer_id = 'cus_evil'`))).rejects.toThrow(/permission denied/);
+    await expect(as(db, A, () => db.query(`insert into rr_clients (name, email, stripe_customer_id) values ('X', 'x@x.com', 'cus_x')`))).rejects.toThrow(/permission denied/);
+    await as(db, A, () => db.query(`update rr_clients set name = 'Acme Inc'`));
+    await db.query(`update rr_clients set stripe_customer_id = 'cus_1' where id = $1`, [c.rows[0].id]);
     const p = await as(db, A, () => db.query<{ id: string }>(`insert into rr_properties (domain, niche, city, client_id, mrr, billing_status) values ('a.com','n','c','${c.rows[0].id}', 900, 'active') returning id`));
     expect((await as(db, B, () => db.query('select * from rr_clients'))).rows).toHaveLength(0);
     await expect(as(db, A, () => db.query('select * from rr_billing_events'))).rejects.toThrow(/permission denied/);
