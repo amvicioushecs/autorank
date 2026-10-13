@@ -69,9 +69,24 @@ Migrations are tested in CI by `supabase/tests/*.test.ts`, which run them in PGl
 | `treg-proxy` | allow-listed treg calls from the UI | `TREG_API_KEY` |
 | `discovery-scan` | batch niche × city scoring (volume, CPC, SERP weakness) | `TREG_API_KEY` |
 | `domain-check` | .com availability via public RDAP | none |
+| `rank-check` | daily Google position per deployed site, alerts | `TREG_API_KEY`, `CRON_SECRET`, `SUPABASE_SERVICE_ROLE_KEY` (auto-injected) |
 | `site-deploy` | generate the static lead-gen site and deploy to Vercel | `VERCEL_TOKEN`, optional `VERCEL_TEAM_ID` |
 
 Deploy all with `supabase functions deploy` (shared code lives in `supabase/functions/_shared`).
+
+### Scheduling rank checks
+Enable the `pg_cron` and `pg_net` extensions, store the cron secret in Vault, then:
+```sql
+select vault.create_secret('your-cron-secret', 'cron_secret');
+select cron.schedule('autorank-rank-check', '0 9 * * *', $$
+  select net.http_post(
+    url := 'https://YOUR-PROJECT.supabase.co/functions/v1/rank-check',
+    headers := jsonb_build_object('Content-Type', 'application/json',
+      'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')),
+    body := '{}'::jsonb);
+$$);
+```
+Use the same value for the `CRON_SECRET` function secret.
 
 ### Deploying the treg proxy
 ```bash

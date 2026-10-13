@@ -95,9 +95,9 @@ Legend: `[x]` done · `[ ]` todo. **(PR #foundation)** = completed by the `senio
 - [~] 3.4 BuilderWizard's final step now really deploys; earlier steps are still cosmetic timers. Property drawer has Build/Redeploy + tracking phone. (PR #phase3)
 
 ### Phase 4 — Rank tracking
-- [ ] 4.1 `rr_rank_checks` table + daily cron via treg SERP. *AC: trend sparkline uses real data.*
-- [ ] 4.2 Rank-drop alerts. 
-- [ ] 4.3 Health score from real signals (rank, indexation, uptime).
+- [x] 4.1 `rr_rank_checks` + `rank-check` edge function (user mode + cron mode via `CRON_SECRET`, per-user budget); updates rank, change, 12-point trend. (PR #phase4) *Scheduling SQL in README; must be enabled in the project.*
+- [x] 4.2 `rr_alerts` for drops ≥3, falling out of top 50, entering top 3; alerts panel + 'Check rankings now' in SEO Monitor. (PR #phase4)
+- [~] 4.3 Health from rank + deployed + lead flow. (PR #phase4) *Indexation/uptime not yet included.*
 
 ### Phase 5 — Leads
 - [ ] 5.1 Form endpoint → `rr_leads`. 
