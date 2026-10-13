@@ -1,2 +1,6 @@
 [functions.treg-proxy]
 verify_jwt = true
+
+# rank-check authenticates itself: user JWT, or x-cron-secret for the scheduler.
+[functions.rank-check]
+verify_jwt = false

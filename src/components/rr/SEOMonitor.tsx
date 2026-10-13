@@ -3,6 +3,7 @@ import { rankHistory, seoKeywords } from '@/data/platformData';
 import { LineChart, ArrowUp, ArrowDown, Minus, RefreshCw, Zap, Globe } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import LiveSerpCheck from './LiveSerpCheck';
+import RankAlerts from './RankAlerts';
 
 const RankChart: React.FC = () => {
   const w = 560, h = 200, pad = 28;
@@ -49,6 +50,7 @@ const SEOMonitor: React.FC = () => {
 
   return (
     <div className="space-y-5">
+      <RankAlerts />
       <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 flex items-center gap-3">
         <Globe className="w-5 h-5 text-sky-400" />
         <div className="flex-1">
