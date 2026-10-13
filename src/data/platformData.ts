@@ -20,6 +20,8 @@ export interface Property {
   siteUrl?: string | null;
   deployedAt?: string | null;
   deployError?: string | null;
+  forwardEmail?: string | null;
+  forwardPhone?: string | null;
 }
 
 export const NICHE_COLORS: Record<string, string> = {

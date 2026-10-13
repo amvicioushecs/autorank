@@ -3,15 +3,24 @@ import { Loader2, Rocket, ExternalLink, Phone } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { Property } from '@/data/platformData';
 import { deploySite } from '@/lib/sitesApi';
-import { updatePropertyPhone } from '@/lib/rrApi';
+import { updatePropertyContact } from '@/lib/rrApi';
 
 const SiteActions: React.FC<{ p: Property; onChanged?: () => void }> = ({ p, onChanged }) => {
   const [busy, setBusy] = useState(false);
   const [phone, setPhone] = useState(p.phone ?? '');
+  const [fwdEmail, setFwdEmail] = useState(p.forwardEmail ?? '');
+  const [fwdPhone, setFwdPhone] = useState(p.forwardPhone ?? '');
 
   const savePhone = async () => {
-    try { await updatePropertyPhone(p.id, phone.trim() || null); toast({ title: 'Phone saved' }); onChanged?.(); }
-    catch (e) { toast({ title: 'Could not save phone', description: e instanceof Error ? e.message : String(e), variant: 'destructive' }); }
+    if (fwdEmail.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(fwdEmail.trim())) {
+      toast({ title: 'Enter a valid forwarding email', variant: 'destructive' });
+      return;
+    }
+    try {
+      await updatePropertyContact(p.id, { phone: phone.trim() || null, forwardEmail: fwdEmail.trim() || null, forwardPhone: fwdPhone.trim() || null });
+      toast({ title: 'Contact & lead routing saved' });
+      onChanged?.();
+    } catch (e) { toast({ title: 'Could not save', description: e instanceof Error ? e.message : String(e), variant: 'destructive' }); }
   };
 
   const deploy = async () => {
@@ -33,8 +42,11 @@ const SiteActions: React.FC<{ p: Property; onChanged?: () => void }> = ({ p, onC
           <Phone className="w-3.5 h-3.5 text-slate-500" />
           <input aria-label="Tracking phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Tracking phone (optional)" className="bg-transparent text-sm text-white outline-none w-full py-2" />
         </div>
-        <button onClick={savePhone} className="text-xs bg-slate-800 border border-slate-700 rounded-lg px-3 text-slate-300 hover:text-white">Save</button>
       </div>
+      <p className="text-[11px] text-slate-500">Lead routing: form leads are emailed and calls forwarded here.</p>
+      <input aria-label="Forward leads to email" value={fwdEmail} onChange={(e) => setFwdEmail(e.target.value)} placeholder="Forward leads to email" className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-sm text-white outline-none" />
+      <input aria-label="Forward calls to phone" value={fwdPhone} onChange={(e) => setFwdPhone(e.target.value)} placeholder="Forward calls to phone (+1...)" className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-sm text-white outline-none" />
+      <button onClick={savePhone} className="w-full text-xs bg-slate-800 border border-slate-700 rounded-lg py-2 text-slate-300 hover:text-white">Save contact &amp; routing</button>
       {p.siteUrl && (
         <a href={p.siteUrl} target="_blank" rel="noreferrer" className="text-xs text-sky-400 flex items-center gap-1 hover:underline">
           <ExternalLink className="w-3 h-3" /> {p.siteUrl}

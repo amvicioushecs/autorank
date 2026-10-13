@@ -100,9 +100,9 @@ Legend: `[x]` done · `[ ]` todo. **(PR #foundation)** = completed by the `senio
 - [~] 4.3 Health from rank + deployed + lead flow. (PR #phase4) *Indexation/uptime not yet included.*
 
 ### Phase 5 — Leads
-- [ ] 5.1 Form endpoint → `rr_leads`. 
-- [ ] 5.2 Call tracking numbers (Twilio) per property, call logs → leads.
-- [ ] 5.3 Lead forwarding to the renting client (email/SMS).
+- [x] 5.1 `lead-capture` public function: site_key lookup, validation, honeypot, per-phone throttle, quality grading, 303 to /thanks; `monthly_leads` kept in sync by trigger. (PR #phase5)
+- [x] 5.2 `twilio-voice` webhook: signature-verified, logs calls as leads, forwards to renter (or voicemail). (PR #phase5) *Buying numbers + setting the webhook is manual.*
+- [x] 5.3 Email forwarding via Resend when `forward_email` + `RESEND_API_KEY` are set; routing fields in the property drawer. (PR #phase5) *SMS not yet.*
 
 ### Phase 6 — Clients, renting & billing
 - [ ] 6.1 `rr_clients` table and client assignment by id (not free text).
