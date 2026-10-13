@@ -20,6 +20,7 @@ const BuilderWizard: React.FC<{ onDeployed?: () => void }> = ({ onDeployed }) =>
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
+  const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const onDeployedRef = useRef(onDeployed);
   onDeployedRef.current = onDeployed;
@@ -36,6 +37,7 @@ const BuilderWizard: React.FC<{ onDeployed?: () => void }> = ({ onDeployed }) =>
         setRunning(false);
         if (savingRef.current) return;
         savingRef.current = true;
+        setSaving(true);
         (async () => {
           try {
             await createProperty({ domain, niche, city, status: 'building', health: 42, keywords: 14 });
@@ -46,6 +48,7 @@ const BuilderWizard: React.FC<{ onDeployed?: () => void }> = ({ onDeployed }) =>
             toast({ title: 'Deploy failed', description: e instanceof Error ? e.message : 'Could not save property to database.', variant: 'destructive' });
           } finally {
             savingRef.current = false;
+            setSaving(false);
           }
         })();
       }
@@ -56,6 +59,7 @@ const BuilderWizard: React.FC<{ onDeployed?: () => void }> = ({ onDeployed }) =>
   }, [running, progress, step, domain, niche, city, createProperty]);
 
   const advance = () => {
+    if (running || savingRef.current) return;
     if (step === 0 && (!niche || !city)) {
       toast({ title: 'Fill in niche & city', variant: 'destructive' });
       return;
@@ -157,12 +161,12 @@ const BuilderWizard: React.FC<{ onDeployed?: () => void }> = ({ onDeployed }) =>
 
         <div className="flex justify-end mt-6">
           {step < 4 ? (
-            <button onClick={advance} disabled={running} className="flex items-center gap-2 bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-900 font-semibold text-sm px-4 py-2.5 rounded-lg disabled:opacity-60">
+            <button onClick={advance} disabled={running || saving} className="flex items-center gap-2 bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-900 font-semibold text-sm px-4 py-2.5 rounded-lg disabled:opacity-60">
               {running ? 'Processing...' : 'Run Agent & Continue'} <ChevronRight className="w-4 h-4" />
             </button>
           ) : (
-            <button onClick={advance} disabled={running} className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-sky-500 text-slate-900 font-semibold text-sm px-4 py-2.5 rounded-lg disabled:opacity-60">
-              <Rocket className="w-4 h-4" /> {running ? 'Deploying...' : 'Deploy Property'}
+            <button onClick={advance} disabled={running || saving} className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-sky-500 text-slate-900 font-semibold text-sm px-4 py-2.5 rounded-lg disabled:opacity-60">
+              <Rocket className="w-4 h-4" /> {running || saving ? 'Deploying...' : 'Deploy Property'}
             </button>
           )}
         </div>

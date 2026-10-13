@@ -46,16 +46,24 @@ describe('client assignment status', () => {
 describe('deployOpportunity', () => {
   it('creates the property before marking the opportunity deployed', async () => {
     mock.current.queue('rr_properties.insert', { data: propRow });
+    mock.current.queue('rr_opportunities.update', { data: [{ id: 'opp-1' }] });
     const p = await api.deployOpportunity(opp);
     expect(p.id).toBe('prop-1');
     expect(mock.current.calls.map((c) => `${c.table}.${c.op}`)).toEqual(['rr_properties.insert', 'rr_opportunities.update']);
-    expect(mock.current.calls[1].filters).toEqual([['id', 'opp-1'], ['user_id', 'user-1']]);
+    expect(mock.current.calls[1].filters).toEqual([['id', 'opp-1'], ['user_id', 'user-1'], ['deployed', false]]);
   });
 
   it('leaves the opportunity untouched if property creation fails', async () => {
     mock.current.queue('rr_properties.insert', { error: new Error('insert failed') });
     await expect(api.deployOpportunity(opp)).rejects.toThrow('insert failed');
     expect(mock.current.calls.some((c) => c.table === 'rr_opportunities')).toBe(false);
+  });
+
+  it('rolls back when the opportunity was already deployed (zero rows updated)', async () => {
+    mock.current.queue('rr_properties.insert', { data: propRow });
+    mock.current.queue('rr_opportunities.update', { data: [] });
+    await expect(api.deployOpportunity(opp)).rejects.toThrow('already deployed');
+    expect(mock.current.calls.some((c) => c.op === 'delete')).toBe(true);
   });
 
   it('rolls back the property if marking the opportunity fails', async () => {

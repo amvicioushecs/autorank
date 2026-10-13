@@ -168,11 +168,15 @@ export async function deployOpportunity(opp: Opportunity): Promise<Property> {
     status: 'building',
     health: 40,
   });
-  const { error } = await supabase
+  const { data: marked, error: markErr } = await supabase
     .from('rr_opportunities')
     .update({ deployed: true })
     .eq('id', opp.id)
-    .eq('user_id', uid);
+    .eq('user_id', uid)
+    .eq('deployed', false)
+    .select('id');
+  // A zero-row update (stale or already-deployed opportunity) must also roll back.
+  const error = markErr ?? (Array.isArray(marked) && marked.length > 0 ? null : new Error('Opportunity was already deployed or no longer exists'));
   if (error) {
     const { error: rbErr } = await supabase.from('rr_properties').delete().eq('id', property.id).eq('user_id', uid);
     if (rbErr) console.error('Rollback of property failed', rbErr);
