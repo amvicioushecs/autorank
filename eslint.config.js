@@ -25,5 +25,10 @@ export default tseslint.config(
       ],
       "@typescript-eslint/no-unused-vars": "off",
     },
-  }
+  },
+  {
+    // shadcn/ui primitives and context modules intentionally co-export helpers/hooks.
+    files: ["src/components/ui/**/*.{ts,tsx}", "src/contexts/**/*.tsx", "src/components/theme-provider.tsx"],
+    rules: { "react-refresh/only-export-components": "off" },
+  },
 );
