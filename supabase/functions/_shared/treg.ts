@@ -15,7 +15,11 @@ export interface TregResult<T = Record<string, unknown>> {
 
 /** Parse a non-negative USD amount to micro-dollars; fail closed (throw) on garbage. */
 export function usdToMicro(raw: string | undefined, fallback: string, name: string): number {
-  const n = Number(raw ?? fallback);
+  const source = raw === undefined ? fallback : raw;
+  if (typeof source !== 'string' || source.trim() === '') {
+    throw new HttpError(500, `${name} must be a non-negative number`);
+  }
+  const n = Number(source);
   if (!Number.isFinite(n) || n < 0) throw new HttpError(500, `${name} must be a non-negative number`);
   return Math.round(n * 1_000_000);
 }

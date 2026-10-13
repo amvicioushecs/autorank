@@ -8,11 +8,17 @@ begin
   for r in
     select schemaname, tablename, policyname from pg_policies
      where schemaname = 'public' and tablename like 'rr\_%'
-       and policyname not in (tablename || '_owner', 'rr_treg_usage_select')
+       and not (
+         (tablename = 'rr_treg_usage' and policyname = 'rr_treg_usage_select')
+         or (tablename <> 'rr_treg_usage' and policyname = tablename || '_owner')
+       )
   loop
     execute format('drop policy if exists %I on %I.%I', r.policyname, r.schemaname, r.tablename);
   end loop;
 end $$;
+
+-- Explicitly drop a stale owner policy on the spend ledger if a live project ever had one.
+drop policy if exists rr_treg_usage_owner on public.rr_treg_usage;
 
 -- 2) treg usage is a spend ledger: users may only read their rows. Writes go through the
 --    service-role reserve/settle functions below so users cannot forge (e.g. negative) costs.
@@ -85,7 +91,10 @@ begin
        where l.property_id = v_prop and l.user_id = v_user and l.created_at >= date_trunc('month', now())
     ) where p.id = v_prop and p.user_id = v_user;
   end if;
-  if tg_op = 'UPDATE' and old.property_id is distinct from new.property_id and old.property_id is not null then
+  if tg_op = 'UPDATE' and (
+       old.property_id is distinct from new.property_id
+       or old.user_id is distinct from new.user_id
+     ) and old.property_id is not null then
     update rr_properties p set monthly_leads = (
       select count(*) from rr_leads l
        where l.property_id = old.property_id and l.user_id = old.user_id and l.created_at >= date_trunc('month', now())
@@ -93,3 +102,8 @@ begin
   end if;
   return null;
 end $$;
+
+-- Fire on user_id changes too (property_id-only missed owner reassignment).
+drop trigger if exists rr_leads_monthly on public.rr_leads;
+create trigger rr_leads_monthly after insert or delete or update of property_id, user_id on public.rr_leads
+  for each row execute function public.rr_refresh_monthly_leads();

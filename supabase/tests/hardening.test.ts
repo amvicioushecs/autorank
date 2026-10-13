@@ -57,4 +57,14 @@ describe('stray policies', () => {
     const r = await db.query<{ policyname: string }>(`select policyname from pg_policies where tablename = 'rr_properties'`);
     expect(r.rows.map((x) => x.policyname)).toEqual(['rr_properties_owner']);
   });
+
+  it('drops a stale rr_treg_usage_owner policy instead of preserving it', async () => {
+    const db = await freshDb();
+    await db.exec(`create policy rr_treg_usage_owner on rr_treg_usage for select using (true)`);
+    await db.exec(readFileSync(join(__dirname, '../migrations/20261019000000_hardening.sql'), 'utf8'));
+    const r = await db.query<{ policyname: string }>(
+      `select policyname from pg_policies where tablename = 'rr_treg_usage' order by policyname`,
+    );
+    expect(r.rows.map((x) => x.policyname)).toEqual(['rr_treg_usage_select']);
+  });
 });
