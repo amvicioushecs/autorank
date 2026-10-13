@@ -13,7 +13,7 @@ interface RRData {
   refresh: () => Promise<void>;
   createProperty: typeof api.createProperty;
   createOpportunity: typeof api.createOpportunity;
-  deployOpportunity: (o: Opportunity) => Promise<void>;
+  deployOpportunity: (o: Opportunity, domain?: string) => Promise<void>;
   setLeadStatus: (id: string, status: Lead['status']) => Promise<void>;
   assignClient: (id: string, client: string | null, mrr: number) => Promise<void>;
 }
@@ -73,8 +73,8 @@ export const RRDataProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return created;
   }, []);
 
-  const deployOpportunity = useCallback(async (o: Opportunity) => {
-    const created = await api.deployOpportunity(o);
+  const deployOpportunity = useCallback(async (o: Opportunity, domain?: string) => {
+    const created = await api.deployOpportunity(o, domain);
     setOpportunities((prev) => prev.filter((x) => x.id !== o.id));
     setProperties((prev) => [created, ...prev]);
   }, []);

@@ -82,10 +82,11 @@ Legend: `[x]` done · `[ ]` todo. **(PR #foundation)** = completed by the `senio
 - [ ] 1.4 Generate typed DB client (`supabase gen types`) and drop `any` row types. *Needs Supabase project access.*
 
 ### Phase 2 — Discovery automation
-- [ ] 2.1 Niche + city seed lists table. *AC: CRUD in UI.*
-- [ ] 2.2 Batch scan job: niche×city → treg volume/CPC → upsert opportunities. *AC: scheduled function, cost capped per run.*
-- [ ] 2.3 Competition check via `treg.google.serp.organic` + `serp.maps` (count of directories/weak sites in top 10). *AC: score includes SERP weakness.*
-- [ ] 2.4 Domain availability check. *AC: suggestion shows available/taken.*
+- [x] 2.1 `rr_discovery_seeds` (owner RLS, case-insensitive de-dupe) + seed manager UI in Discovery. (PR #phase2)
+- [x] 2.2 `discovery-scan` edge function: niche×city → one treg volume/CPC call → SERP checks on the top N → idempotent upsert; `rr_scan_runs` log; per-user daily budget. (PR #phase2)
+- [ ] 2.2b Nightly scheduled scan (pg_cron + service role, per user). *Needs owner decision on spend.*
+- [x] 2.3 SERP weakness (directory share of organic top 10) folded into the score; shared scoring module used by both UI and function. (PR #phase2) *Maps pack not yet included.*
+- [x] 2.4 `domain-check` edge function using the public Verisign RDAP service (no key); deploy picks the first unregistered candidate. (PR #phase2)
 
 ### Phase 3 — Build & deploy sites
 - [ ] 3.1 Static site template (Astro/Next) with LocalBusiness schema, service + city pages.

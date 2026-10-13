@@ -159,10 +159,10 @@ export function domainForOpportunity(opp: Pick<Opportunity, 'city' | 'niche'>): 
  * Deploy an opportunity: create the property FIRST, then mark the opportunity deployed.
  * If marking fails, the just-created property is deleted (rollback) so state stays consistent.
  */
-export async function deployOpportunity(opp: Opportunity): Promise<Property> {
+export async function deployOpportunity(opp: Opportunity, domain?: string): Promise<Property> {
   const uid = await ownerId();
   const property = await createProperty({
-    domain: domainForOpportunity(opp),
+    domain: domain ?? domainForOpportunity(opp),
     niche: opp.niche,
     city: opp.city,
     status: 'building',

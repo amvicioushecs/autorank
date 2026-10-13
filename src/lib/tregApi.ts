@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { ownerId } from '@/lib/rrApi';
+import { scoreOpportunity as scoreShared } from '../../supabase/functions/_shared/discovery.ts';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Json = any;
@@ -83,15 +84,9 @@ export async function fetchTregUsage(limit = 50): Promise<UsageRow[]> {
   return (data || []).map((r: Json) => ({ id: r.id, endpoint: r.endpoint, costMicro: Number(r.cost_micro) || 0, callId: r.call_id, status: r.status, createdAt: r.created_at }));
 }
 
-/** Turn keyword metrics into a 0-100 Rank & Rent opportunity score. */
-export function scoreOpportunity(m: KeywordMetric): { score: number; estRevenue: number } {
-  const vol = Math.min(m.searchVolume / 2000, 1); // demand
-  const cpc = Math.min(m.cpc / 60, 1); // commercial intent
-  const ease = 1 - Math.min(m.competitionIndex / 100, 1); // low competition
-  const score = Math.round(40 + (vol * 0.3 + cpc * 0.35 + ease * 0.35) * 60);
-  // ~3% of searches become leads, renter pays ~30% of lead value proxy (cpc)
-  const estRevenue = Math.round((m.searchVolume * 0.03 * Math.max(m.cpc, 5) * 0.6) / 50) * 50;
-  return { score: Math.min(score, 99), estRevenue: Math.max(estRevenue, 300) };
+/** Turn keyword metrics into a 0-100 Rank & Rent opportunity score (shared with the discovery-scan function). */
+export function scoreOpportunity(m: KeywordMetric, serpWeakness: number | null = null): { score: number; estRevenue: number } {
+  return scoreShared(m, serpWeakness);
 }
 
 export const microToUsd = (m: number) => `$${(m / 1_000_000).toFixed(m < 10000 ? 4 : 3)}`;

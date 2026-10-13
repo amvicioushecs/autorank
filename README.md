@@ -63,6 +63,15 @@ supabase db push          # apply migrations
 `rr_seed_starter()` gives a new account five sample opportunities (no fake properties or revenue).
 Migrations are tested in CI by `supabase/tests/*.test.ts`, which run them in PGlite.
 
+### Edge functions
+| Function | Purpose | Secrets |
+| --- | --- | --- |
+| `treg-proxy` | allow-listed treg calls from the UI | `TREG_API_KEY` |
+| `discovery-scan` | batch niche × city scoring (volume, CPC, SERP weakness) | `TREG_API_KEY` |
+| `domain-check` | .com availability via public RDAP | none |
+
+Deploy all with `supabase functions deploy` (shared code lives in `supabase/functions/_shared`).
+
 ### Deploying the treg proxy
 ```bash
 supabase login
