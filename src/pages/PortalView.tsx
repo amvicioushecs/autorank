@@ -2,12 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Inbox, TrendingUp, Loader2, ShieldAlert } from 'lucide-react';
 import { fetchPortalView, PortalView as PortalData } from '@/lib/portalApi';
+import { openBillingPortal } from '@/lib/billingApi';
 
 type State = { status: 'loading' } | { status: 'invalid' } | { status: 'error'; message: string } | { status: 'ok'; data: PortalData };
 
 const PortalView: React.FC = () => {
   const { token = '' } = useParams();
   const [state, setState] = useState<State>({ status: 'loading' });
+  const [billingBusy, setBillingBusy] = useState(false);
+  const [billingError, setBillingError] = useState<string | null>(null);
+  const manageBilling = async () => {
+    setBillingBusy(true); setBillingError(null);
+    try { window.location.href = (await openBillingPortal(token)).url; }
+    catch (e) { setBillingError(e instanceof Error ? e.message : String(e)); setBillingBusy(false); }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -43,6 +51,18 @@ const PortalView: React.FC = () => {
           <div className="rounded-lg bg-slate-800/50 p-4"><Inbox className="w-4 h-4 text-sky-400 mb-1" /><p className="text-2xl font-mono font-bold">{property.monthlyLeads ?? 0}</p><p className="text-xs text-slate-500">Leads this month</p></div>
           <div className="rounded-lg bg-slate-800/50 p-4"><TrendingUp className="w-4 h-4 text-emerald-400 mb-1" /><p className="text-2xl font-mono font-bold">#{property.rankPosition ?? '—'}</p><p className="text-xs text-slate-500">Google position</p></div>
         </div>
+        {property.hasBilling && (
+          <section className="rounded-lg border border-slate-800 p-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold">Billing</p>
+              <p className="text-xs text-slate-400">{property.mrr ? `$${property.mrr}/month` : ''} · {property.billingStatus ?? 'unknown'}</p>
+              {billingError && <p className="text-xs text-rose-400 mt-1">{billingError}</p>}
+            </div>
+            <button onClick={manageBilling} disabled={billingBusy} className="text-sm bg-sky-500 text-slate-900 font-semibold rounded-lg px-3 py-2 disabled:opacity-60">
+              {billingBusy ? 'Opening…' : 'Invoices & payment'}
+            </button>
+          </section>
+        )}
         <section className="rounded-lg border border-slate-800">
           <h2 className="px-4 py-3 text-sm font-semibold border-b border-slate-800">Recent leads</h2>
           {leads.length === 0 ? (

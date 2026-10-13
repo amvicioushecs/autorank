@@ -72,9 +72,18 @@ Migrations are tested in CI by `supabase/tests/*.test.ts`, which run them in PGl
 | `rank-check` | daily Google position per deployed site, alerts | `TREG_API_KEY`, `CRON_SECRET`, `SUPABASE_SERVICE_ROLE_KEY` (auto-injected) |
 | `lead-capture` | public form endpoint for deployed sites (no JWT) | optional `RESEND_API_KEY`, `LEAD_FROM_EMAIL` |
 | `twilio-voice` | Twilio voice webhook: log + forward calls (no JWT) | `TWILIO_AUTH_TOKEN`, `PUBLIC_FUNCTIONS_URL` |
+| `billing-checkout` | Stripe Checkout link to rent a property monthly | `STRIPE_SECRET_KEY`, `APP_URL` |
+| `stripe-webhook` | subscription lifecycle → property status/MRR (no JWT) | `STRIPE_WEBHOOK_SECRET`, `STRIPE_SECRET_KEY` |
+| `portal-billing` | client billing portal from a portal link (no JWT) | `STRIPE_SECRET_KEY`, `APP_URL` |
 | `site-deploy` | generate the static lead-gen site and deploy to Vercel | `VERCEL_TOKEN`, optional `VERCEL_TEAM_ID` |
 
 Deploy all with `supabase functions deploy` (shared code lives in `supabase/functions/_shared`).
+
+### Stripe
+Create a webhook endpoint at `https://YOUR-PROJECT.supabase.co/functions/v1/stripe-webhook` for
+`checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted` and
+`invoice.payment_failed`, then set its signing secret as `STRIPE_WEBHOOK_SECRET`. Enable the
+Customer Portal in Stripe settings for `portal-billing`. Use test-mode keys first.
 
 ### Scheduling rank checks
 Enable the `pg_cron` and `pg_net` extensions, store the cron secret in Vault, then:
