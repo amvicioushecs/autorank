@@ -1,24 +1,13 @@
 import { supabase } from '@/lib/supabase';
 import { ownerId } from '@/lib/rrApi';
+import { invokeFn } from '@/lib/invokeFn';
 
 export type SeedKind = 'niche' | 'city';
 export interface Seed { id: string; kind: SeedKind; value: string }
 export interface ScanResult { scanned: number; inserted: number; costMicro: number; message?: string }
 export interface DomainAvailability { domain: string; available: boolean | null }
 
-async function invoke<T>(fn: string, body: unknown): Promise<T> {
-  const { data, error } = await supabase.functions.invoke(fn, { body });
-  if (error) {
-    let msg = error.message;
-    try {
-      const ctx = (error as { context?: { json?: () => Promise<{ error?: string }> } }).context;
-      if (ctx?.json) msg = (await ctx.json()).error || msg;
-    } catch { /* ignore */ }
-    throw new Error(msg);
-  }
-  if (data?.error) throw new Error(data.error);
-  return data as T;
-}
+const invoke = invokeFn;
 
 export async function listSeeds(): Promise<Seed[]> {
   const uid = await ownerId();

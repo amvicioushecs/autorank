@@ -16,6 +16,10 @@ export interface Property {
   mrr: number; // monthly recurring revenue
   client: string | null;
   trend: number[]; // sparkline data (position over time, lower is better)
+  phone?: string | null;
+  siteUrl?: string | null;
+  deployedAt?: string | null;
+  deployError?: string | null;
 }
 
 export const NICHE_COLORS: Record<string, string> = {

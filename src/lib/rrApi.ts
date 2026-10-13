@@ -19,6 +19,10 @@ const mapProperty = (r: Row): Property => ({
   mrr: r.mrr,
   client: r.client,
   trend: Array.isArray(r.trend) ? r.trend : [],
+  phone: r.phone ?? null,
+  siteUrl: r.site_url ?? null,
+  deployedAt: r.deployed_at ?? null,
+  deployError: r.deploy_error ?? null,
 });
 
 const mapOpportunity = (r: Row): Opportunity => ({
@@ -105,6 +109,12 @@ export async function updatePropertyClient(id: string, client: string | null, mr
     .update({ client, mrr, status: clientStatus(client) })
     .eq('id', id)
     .eq('user_id', uid);
+  if (error) throw error;
+}
+
+export async function updatePropertyPhone(id: string, phone: string | null) {
+  const uid = await ownerId();
+  const { error } = await supabase.from('rr_properties').update({ phone }).eq('id', id).eq('user_id', uid);
   if (error) throw error;
 }
 

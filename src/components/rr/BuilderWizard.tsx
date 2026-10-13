@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Check, Hammer, Globe, FileText, Search, Rocket, Loader2, ChevronRight, Sparkles } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { useRRData } from '@/contexts/RRDataContext';
+import { deploySite } from '@/lib/sitesApi';
 
 const steps = [
   { id: 0, label: 'Niche Selection', icon: Sparkles, agent: 'Discovery validates demand & seed keywords' },
@@ -40,8 +41,13 @@ const BuilderWizard: React.FC<{ onDeployed?: () => void }> = ({ onDeployed }) =>
         setSaving(true);
         (async () => {
           try {
-            await createProperty({ domain, niche, city, status: 'building', health: 42, keywords: 14 });
-            toast({ title: 'Property Live', description: `${domain} saved to database. SEO Optimizer now monitoring rankings.` });
+            const created = await createProperty({ domain, niche, city, status: 'building', health: 42, keywords: 14 });
+            try {
+              const r = await deploySite(created.id);
+              toast({ title: 'Site deployed', description: `${r.url} is live. Point ${domain} DNS at Vercel to go live on the domain.` });
+            } catch (deployErr) {
+              toast({ title: 'Property saved, site not deployed', description: deployErr instanceof Error ? deployErr.message : String(deployErr), variant: 'destructive' });
+            }
             setDone(true);
             onDeployedRef.current?.();
           } catch (e) {
