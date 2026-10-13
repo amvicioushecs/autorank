@@ -69,6 +69,7 @@ Migrations are tested in CI by `supabase/tests/*.test.ts`, which run them in PGl
 | `treg-proxy` | allow-listed treg calls from the UI | `TREG_API_KEY` |
 | `discovery-scan` | batch niche × city scoring (volume, CPC, SERP weakness) | `TREG_API_KEY` |
 | `domain-check` | .com availability via public RDAP | none |
+| `site-deploy` | generate the static lead-gen site and deploy to Vercel | `VERCEL_TOKEN`, optional `VERCEL_TEAM_ID` |
 
 Deploy all with `supabase functions deploy` (shared code lives in `supabase/functions/_shared`).
 

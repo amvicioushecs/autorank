@@ -89,10 +89,10 @@ Legend: `[x]` done · `[ ]` todo. **(PR #foundation)** = completed by the `senio
 - [x] 2.4 `domain-check` edge function using the public Verisign RDAP service (no key); deploy picks the first unregistered candidate. (PR #phase2)
 
 ### Phase 3 — Build & deploy sites
-- [ ] 3.1 Static site template (Astro/Next) with LocalBusiness schema, service + city pages.
-- [ ] 3.2 Content generation job (localized pages) stored per property.
-- [ ] 3.3 Deploy via Vercel/Netlify API; store live URL; DNS/SSL. *AC: BuilderWizard actually deploys.*
-- [ ] 3.4 Make BuilderWizard steps call real jobs instead of timers.
+- [x] 3.1 Static site generator (`_shared/site.ts`): home + per-service pages, LocalBusiness/Service JSON-LD, tel CTA, lead form with honeypot, sitemap, robots; all text escaped. (PR #phase3)
+- [ ] 3.2 AI-written localized content per page. *Templated copy only for now; needs an LLM key decision.*
+- [x] 3.3 `site-deploy` edge function: Vercel `POST /v13/deployments` (inline files, production) + attach custom domain; stores `site_url`/`deployment_id`/`deploy_error`. (PR #phase3) *DNS at the registrar is still manual.*
+- [~] 3.4 BuilderWizard's final step now really deploys; earlier steps are still cosmetic timers. Property drawer has Build/Redeploy + tracking phone. (PR #phase3)
 
 ### Phase 4 — Rank tracking
 - [ ] 4.1 `rr_rank_checks` table + daily cron via treg SERP. *AC: trend sparkline uses real data.*

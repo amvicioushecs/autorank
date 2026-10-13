@@ -2,8 +2,13 @@ import React from 'react';
 import { Property, NICHE_COLORS } from '@/data/platformData';
 import { X, Globe, MapPin, Inbox, DollarSign, Trophy, Activity, ExternalLink } from 'lucide-react';
 import Sparkline from './Sparkline';
+import SiteActions from './SiteActions';
+import { useRRData } from '@/contexts/RRDataContext';
 
-const PropertyDetail: React.FC<{ p: Property | null; onClose: () => void }> = ({ p, onClose }) => {
+const PropertyDetail: React.FC<{ p: Property | null; onClose: () => void }> = ({ p: selected, onClose }) => {
+  const { refresh, properties } = useRRData();
+  // Prefer the live copy so the drawer reflects updates (e.g. a new site URL) after refresh.
+  const p = selected ? properties.find((x) => x.id === selected.id) ?? selected : null;
   if (!p) return null;
   const ni = NICHE_COLORS[p.niche] || '#38bdf8';
   return (
@@ -24,6 +29,7 @@ const PropertyDetail: React.FC<{ p: Property | null; onClose: () => void }> = ({
         </div>
 
         <div className="p-5 space-y-5">
+          <SiteActions p={p} onChanged={refresh} />
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-slate-900/60 border border-slate-800 rounded-lg p-3 text-center">
               <Trophy className="w-4 h-4 mx-auto text-amber-400 mb-1" />
