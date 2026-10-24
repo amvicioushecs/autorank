@@ -26,6 +26,13 @@ alter table public.rr_opportunities add column if not exists keyword text;
 alter table public.rr_opportunities add column if not exists serp_weakness int;
 alter table public.rr_opportunities add column if not exists source text not null default 'manual';
 -- One opportunity per niche+city per user (needed for idempotent batch upserts).
+-- Existing scans may have saved duplicates: keep the best-scoring (then newest) row of each combo.
+delete from public.rr_opportunities o
+ using (
+   select id, row_number() over (partition by user_id, niche, city order by deployed desc, score desc nulls last, created_at desc) as rn
+     from public.rr_opportunities
+ ) d
+ where o.id = d.id and d.rn > 1;
 create unique index if not exists rr_opportunities_user_combo_uq on public.rr_opportunities(user_id, niche, city);
 
 do $$

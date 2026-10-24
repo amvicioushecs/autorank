@@ -4,7 +4,7 @@ export interface PortalLead {
   id: string; name: string; service: string; value: number; quality: string; status: string; channel: string; created_at: string;
 }
 export interface PortalView {
-  property: { domain: string; niche: string; city: string; client: string | null; rankPosition: number | null; monthlyLeads: number | null; trend: number[] | null };
+  property: { domain: string; niche: string; city: string; client: string | null; rankPosition: number | null; monthlyLeads: number | null; trend: number[] | null; mrr?: number | null; billingStatus?: string | null; hasBilling?: boolean };
   leads: PortalLead[];
   expiresAt: string;
 }
