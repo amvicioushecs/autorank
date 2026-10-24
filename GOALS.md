@@ -110,6 +110,15 @@ Legend: `[x]` done · `[ ]` todo. **(PR #foundation)** = completed by the `senio
 - [x] 6.3 Portal shows leads/calls, rent and billing status; `portal-billing` opens Stripe's billing portal (invoices, card, cancel) for that client only. (PR #phase6)
 - [ ] 6.4 Outreach pipeline to find/pitch local businesses for unrented sites.
 
+### Review hardening (PR #review-hardening)
+- [x] H.1 treg spend ledger is server-only; atomic per-user budget reservation; malformed budget env fails closed.
+- [x] H.2 Drop stray pre-existing policies on rr_* tables so only owner-only RLS applies.
+- [x] H.3 Leads can only reference the owner's own property; monthly counter scoped to owner.
+- [x] H.4 Discovery migration dedupes existing niche+city duplicates before the unique index.
+- [x] H.5 Twilio routing refuses ambiguous tracking-number matches.
+- [x] H.6 Billing (in PR #phase6): server-only `stripe_customer_id`, literal email match, checkout idempotency + duplicate-subscription guard, Basil-compatible invoice handling.
+- [ ] H.7 BuilderWizard: on site-deploy failure, stay on a retry state instead of the success screen (property is saved; deploy can be retried from the property drawer today).
+
 ### Phase 7 — Ops
 - [ ] 7.1 Error monitoring + structured logs for edge functions.
 - [ ] 7.2 Cost dashboard (treg, hosting) per property vs. revenue.

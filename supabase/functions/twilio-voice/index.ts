@@ -24,7 +24,10 @@ Deno.serve(handle(async (req) => {
   const db = serviceClient();
   const to = digits(params.To ?? '');
   const { data: props } = await db.from('rr_properties').select('id, user_id, domain, niche, phone, forward_phone').not('phone', 'is', null);
-  const prop = (props ?? []).find((p) => digits(p.phone).slice(-10) === to.slice(-10));
+  const matches = to.length >= 10 ? (props ?? []).filter((p) => digits(p.phone).slice(-10) === to.slice(-10)) : [];
+  if (matches.length > 1) console.error('ambiguous tracking number', to, matches.map((m) => m.id));
+  // Never guess: an ambiguous number could route one tenant's caller to another tenant.
+  const prop = matches.length === 1 ? matches[0] : null;
   if (!prop) return twiml('<Say>Sorry, this number is not in service.</Say><Hangup/>');
 
   await db.from('rr_leads').insert({
